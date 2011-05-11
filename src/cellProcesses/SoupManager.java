@@ -14,7 +14,7 @@ public class SoupManager {
 		soup = new byte[SOUP_SIZE];
 		lockedMem = new boolean[SOUP_SIZE];
 		cells = new LinkedList<Cell>();
-		code = new ArrayList<Code>();
+		codes = new ArrayList<Code>();
 	}
 	
 	public byte getValue(int ip) {
