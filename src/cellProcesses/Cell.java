@@ -20,6 +20,10 @@ public class Cell {
         public void act(int cycles) {
                 cpu.act(cycles);
         }
+        
+        public int getSize() {
+        	return this.size;
+        }
 }
 
 class CPU {
@@ -61,7 +65,7 @@ class CPU {
         public void act(int cycles) {
                 this.cycles += cycles;
                 while(this.cycles > 0) {
-                        byte b = 0/*soup.getValue(ip)*/;
+                        byte b = soup.getValue(ip);
                         this.execute(b);
                 }
         }

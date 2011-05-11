@@ -1,6 +1,6 @@
 package cellProcesses;
 
-public class Code {
+public class Code implements Comparable<Code> {
 	private String name;
 	private byte[] instr;
 	
@@ -15,5 +15,14 @@ public class Code {
 	
 	public String getName() {
 		return name;
+	}
+
+	@Override
+	public int compareTo(Code c) {
+		if(this.instr.length != c.instr.length) {
+			return this.instr.length - c.instr.length;
+		} else {
+			return this.name.compareTo(c.name);
+		}
 	}
 }
