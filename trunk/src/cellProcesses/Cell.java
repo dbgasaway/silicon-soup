@@ -61,7 +61,7 @@ class CPU {
         public void act(int cycles) {
                 this.cycles += cycles;
                 while(this.cycles > 0) {
-                        byte b = soup.getValue(ip);
+                        byte b = 0/*soup.getValue(ip)*/;
                         this.execute(b);
                 }
         }
