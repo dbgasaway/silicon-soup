@@ -8,6 +8,8 @@ import javax.swing.*;
 import cellProcesses.Cell;
 import cellProcesses.SoupManager;
 
+import java.util.Stack;
+
 public class SoupGUI extends JFrame implements Runnable {
 	/**
 	 * default id
@@ -18,9 +20,12 @@ public class SoupGUI extends JFrame implements Runnable {
 	private JPanel p;
 	private final JTextArea t;
 	private final JButton b;
+	private Stack<Cell> cells;
+	private Stack<byte[]> codes;
 
 	public SoupGUI() {
 		this.setTitle("SiliconSoup");
+		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
 		//this.setSize(500, 500);
 		
 		p = new JPanel();
@@ -38,37 +43,54 @@ public class SoupGUI extends JFrame implements Runnable {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				isRunning = !isRunning;
+				System.out.println("Running= " + isRunning);
 			}
 		});
 		
 		p.add(t);
+		p.add(b);
 
 		s = new SoupManager();
+		cells = new Stack<Cell>();
+		codes = new Stack<byte[]>();
 		isRunning = false;
 		
+		this.pack();
 		this.setVisible(true);
 	}
 	
 	private boolean isRunning;
-
+	
 	@Override
 	public void run() {
 		while(true) {
+			//System.out.println("Run");
 			if(isRunning) {
+				//System.out.println("Really running");
+				while(!cells.empty()) {
+					s.addCell(cells.pop());
+				}
+				//System.out.println("Cleared new Cells1");
+				while(!codes.empty()) {
+					s.addCell(codes.pop());
+				}
+				//System.out.println("Cleared new Cells2");
 				for(int i = 0; i < 100; i++) {
 					s.act();
 				}
+				System.out.println("acted");
 				String tx = "";
 				String[] lines = s.getTopGenes();
 				for(String str : lines) {
 					tx += str + "\n";
 				}
+				//System.out.println(tx);
 				t.setText(tx);
 			} else {
 				Object o = new Object();
 				synchronized(o) {
 					try {
-						o.wait(100);
+						o.wait(10);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -78,7 +100,10 @@ public class SoupGUI extends JFrame implements Runnable {
 	}
 	
 	public void addCell(Cell c) {
-		//TODO: allow concurrent cell addition
-		s.addCell(c);
+		cells.push(c);
+	}
+	
+	public void addCell(byte[] code) {
+		codes.push(code);
 	}
 }
