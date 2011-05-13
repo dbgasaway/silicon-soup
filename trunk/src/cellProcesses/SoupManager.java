@@ -34,7 +34,9 @@ public class SoupManager {
 	 * @return if the operation was successful*/
 	public boolean setValue(int ix, byte val, Cell c) {
 		ix = ix % SOUP_SIZE;
-		c.setHead(c.getHead() % SOUP_SIZE);
+		if(c != null) {
+			c.setHead(c.getHead() % SOUP_SIZE);
+		}
 		if(getLockVal(ix) && (ix <= c.getHead() || ix >= c.getHead() + c.getSize() + c.getAlloc()) || c == null) {
 			return false;
 		} else {
@@ -93,7 +95,7 @@ public class SoupManager {
 	
 	/**adds a cell to the soup given the given code
 	 * @param range - the area of code to make the new cell with*/
-	private void addCell(byte[] range) {
+	public void addCell(byte[] range) {
 		boolean isSame = false;
 		Code d = null;
 		for(int i = 0; i < codes.size(); i++) {
@@ -266,6 +268,7 @@ public class SoupManager {
 	/**Cycles through the cell queue once*/
 	public void act() {
 		for(Cell c : cells) {
+			//System.out.println("Cell start!");
 			int cycles = 0;
 			switch(feedType) {
 			case RAND_FEED:
@@ -277,7 +280,9 @@ public class SoupManager {
 			default:
 				throw new IllegalArgumentException("Invalid feed type: " + feedType);
 			}
+			//System.out.println("Cell mid");
 			c.act(cycles);
+			//System.out.println("Cell done!");
 		}
 	}
 	
@@ -285,6 +290,7 @@ public class SoupManager {
 	public String[] getTopGenes() {
 		ArrayList<Code> list = new ArrayList<Code>();
 		ArrayList<Integer> amounts = new ArrayList<Integer>();
+		//System.out.println(cells.size());
 		for(Cell c : cells) {
 			int ix = list.lastIndexOf(c.getCode());
 			if(ix == -1) {
@@ -294,6 +300,7 @@ public class SoupManager {
 				amounts.set(ix, amounts.get(ix) + 1);
 			}
 		}
+		//System.out.println(amounts.size() + " " + list.size());
 		int[] tops = new int[10];
 		Arrays.fill(tops, 0);
 		Code[] topCodes = new Code[10];
@@ -301,7 +308,7 @@ public class SoupManager {
 			int i = amounts.get(n);
 			for(int k = 0; k < tops.length ; k++) {
 				if(i > tops[k]) {
-					for(int j = tops.length - 1; j <= k; j--) {
+					for(int j = tops.length - 1; j > k; j--) {
 						tops[j] = tops[j - 1];
 						topCodes[j] = topCodes[j - 1];
 					}
@@ -309,8 +316,13 @@ public class SoupManager {
 					topCodes[k] = list.get(n);
 				}
 			}
+			amounts.remove(n);
+			list.remove(n);
+			n--;
 		}
+		//TODO: make not repeat only org
 		String[] ret = new String[10];
+		System.out.println(Arrays.toString(topCodes));
 		for(int i = 0; i < ret.length; i++) {
 			Code item = topCodes[i];
 			if(item != null) {

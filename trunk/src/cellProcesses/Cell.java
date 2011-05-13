@@ -74,49 +74,6 @@ class CPU {
         private int cycles;
         private Cell cell;
         private SoupManager soup;
-        
-        /**NOP and template value*/
-        private static final byte NOP0 = 0;
-        /**NOP and template value*/
-        private static final byte NOP1 = 1;
-        private static final byte ZERO = 2;
-        private static final byte SUBACB = 3;
-        private static final byte SUBACA = 23;
-        private static final byte JUMPF = 4;
-        private static final byte JUMP = 5;
-        private static final byte JUMPB = 6;
-        private static final byte SEARCHF = 7;
-        private static final byte SEARCHB = 8;
-        private static final byte SEARCH = 9;
-        private static final byte DIVIDE = 10;
-        private static final byte MOVEIXBA = 11;
-        private static final byte LOADAB = 12;
-        private static final byte LOADCD = 22;
-        private static final byte ALLOC = 13;
-        private static final byte PUSHA = 14;
-        private static final byte PUSHB = 15;
-        private static final byte PUSHC = 16;
-        private static final byte PUSHD = 20;
-        private static final byte POPA = 17;
-        private static final byte POPB = 18;
-        private static final byte POPC = 19;
-        private static final byte POPD = 21;
-        private static final byte INCA = 24;
-        private static final byte INCB = 25;
-        private static final byte INCC = 26;
-        private static final byte DECC = 27;
-        private static final byte NOT0C = 28;
-        private static final byte LSHIFTC = 29;
-        private static final byte IFCZ = 30;
-        private static final byte CALL = 31;
-        private static final byte RET = 32;
-        
-        /**contains all valid instructions*/
-        private static final byte[] VALID_INSTRUCTIONS = {NOP0, NOP1, ZERO, SUBACB, 
-        	JUMPF, JUMP, JUMPB, SEARCHF, SEARCHB, SEARCH, DIVIDE, MOVEIXBA, LOADAB, 
-        	ALLOC, PUSHA, PUSHB, PUSHC, POPA, POPB, POPC, PUSHD, POPD, LOADCD, SUBACA,
-        	INCA, INCB, INCC, DECC, NOT0C, LSHIFTC, IFCZ, CALL, RET
-        };
 
         public CPU(int ip, SoupManager soup, Cell c) {
                 this.ip = ip;
@@ -137,6 +94,8 @@ class CPU {
                 while(this.cycles > 0) {
                 	byte b = soup.getValue(ip);
                 	this.execute(b);
+                	this.cycles--;
+                	//System.out.println("Cycle: " + cycles + ", IP: " + ip);
                 }
         }
         
@@ -167,19 +126,19 @@ class CPU {
         	 int ix;
         	 int p;
         	 switch(by) {
-        	 case ZERO:
+        	 case Code.ZERO:
         		 c = 0;
         		 ip++;
         		 break;
-        	 case SUBACB:
+        	 case Code.SUBACB:
         		 this.c = c - a;
         		 ip++;
         		 break;
-        	 case SUBACA:
+        	 case Code.SUBACA:
         		 this.a = c - a;
         		 ip++;
         		 break;
-        	 case JUMP:
+        	 case Code.JUMP:
         		 template = this.getTemplate();
         		 ix = search(template, OUT);
         		 if(ix != ip) {
@@ -187,7 +146,7 @@ class CPU {
         		 } else {
         			 ip += template.length;
         		 }
-        	 case JUMPF:
+        	 case Code.JUMPF:
         		 template = this.getTemplate();
         		 ix = search(template, FORWARD);
         		 if(ix != ip) {
@@ -195,7 +154,7 @@ class CPU {
         		 } else {
         			 ip += template.length;
         		 }
-        	 case JUMPB:
+        	 case Code.JUMPB:
         		 template = this.getTemplate();
         		 ix = search(template, BACK);
         		 if(ix != ip) {
@@ -204,7 +163,7 @@ class CPU {
         			 ip += template.length;
         		 }
         		 break;
-        	 case SEARCH:
+        	 case Code.SEARCH:
         		 template = this.getTemplate();
         		 ix = search(template, OUT);
         		 if(ix != ip) {
@@ -213,7 +172,7 @@ class CPU {
         		 } else {
         			 ip++;
         		 }
-        	 case SEARCHB:
+        	 case Code.SEARCHB:
         		 template = this.getTemplate();
         		 ix = search(template, BACK);
         		 a = ix;
@@ -223,7 +182,7 @@ class CPU {
         		 } else {
         			 ip++;
         		 }
-        	 case SEARCHF:
+        	 case Code.SEARCHF:
         		 template = this.getTemplate();
         		 ix = search(template, FORWARD);
         		 a = ix;
@@ -234,23 +193,23 @@ class CPU {
         			 ip++;
         		 }
         		 break;
-        	 case DIVIDE:
+        	 case Code.DIVIDE:
         		 //TODO:implement division: daughter is put last in time queue
         		 soup.splitCell(cell);
         		 ip++;
         		//TODO:move down death queue one slot
         		 break;
-        	 case MOVEIXBA:
+        	 case Code.MOVEIXBA:
         		 soup.setValue(a, soup.getValue(b), cell);
         		 ip++;
         		 break;
-        	 case LOADAB:
+        	 case Code.LOADAB:
         		 this.b = this.a;
         		 break;
-        	 case LOADCD:
+        	 case Code.LOADCD:
         		 this.d = this.c;
         		 break;
-        	 case ALLOC:
+        	 case Code.ALLOC:
         		 if(c > 0 || cell.getAlloc() == c) {
         			 //TODO:implement memory allocation, should put new address in a and the new address may not always be continuous
         			 cell.allocate(c);
@@ -259,85 +218,85 @@ class CPU {
         		 ip++;
         		 //TODO:move down death queue one slot
         		 break;
-        	 case PUSHA:
+        	 case Code.PUSHA:
         		 push(a);
         		 ip++;
         		 break;
-        	 case PUSHB:
+        	 case Code.PUSHB:
         		 push(by);
         		 ip++;
         		 break;
-        	 case PUSHC:
+        	 case Code.PUSHC:
         		 push(c);
         		 ip++;
         		 break;
-        	 case PUSHD:
+        	 case Code.PUSHD:
         		 push(d);
         		 ip++;
         		 break;
-        	 case POPA:
+        	 case Code.POPA:
         		 p = pop();
         		 if(p < 0) p = 0;
         		 a = p;
         		 ip++;
         		 break;
-        	 case POPB:
+        	 case Code.POPB:
         		 p = pop();
         		 if(p < 0) p = 0;
         		 this.b = p;
         		 ip++;
         		 break;
-        	 case POPC:
+        	 case Code.POPC:
         		 p = pop();
         		 if(p < 0) p = 0;
         		 c = p;
         		 ip++;
         		 break;
-        	 case POPD:
+        	 case Code.POPD:
         		 p = pop();
         		 if(p < 0) p = 0;
         		 d = p;
         		 ip++;
         		 break;
-        	 case INCA:
+        	 case Code.INCA:
         		 a++;
         		 ip++;
         		 break;
-        	 case INCB:
+        	 case Code.INCB:
         		 b++;
         		 ip++;
         		 break;
-        	 case INCC:
+        	 case Code.INCC:
         		 c++;
         		 ip++;
         		 break;
-        	 case DECC:
+        	 case Code.DECC:
         		 c--;
         		 ip++;
         		 break;
-        	 case NOT0C:
+        	 case Code.NOT0C:
         		 c = c ^ a;
         		 ip++;
         		 break;
-        	 case LSHIFTC:
+        	 case Code.LSHIFTC:
         		 c = c << 1;
         		 ip++;
         		 break;
-        	 case IFCZ:
+        	 case Code.IFCZ:
         		 if(c == 0) {
         			 ip++;
         		 } else {
         			 ip += 2;
         		 }
         		 break;
-        	 case CALL:
+        	 case Code.CALL:
         		 template = this.getTemplate();
         		 c = template.length;
         		 ix = search(template, OUT);
         		 push(ip + template.length + 1);
         		 ip += template.length + ix;
         		 break;
-        	 case RET:
+        	 case Code.RET:
         		 ix = pop();
         		 if(ix < 0) {
         			 ix = 0;
@@ -352,7 +311,7 @@ class CPU {
 
         /**The valid template values. One searches for the inverse of the template after
          *  the ip, e.g. NOP1, NOP0 -> NOP0, NOP1*/
-		private static final byte[] TEMPLATE_VALUES = {NOP0, NOP1};
+		private static final byte[] TEMPLATE_VALUES = {Code.NOP0, Code.NOP1};
         
         /**returns the template after the current instruction*/
 		private byte[] getTemplate() {
@@ -372,11 +331,11 @@ class CPU {
 			byte[] base = soup.getRange(ip + 1, ip + i);
 			for(int k = 0; k < base.length; k++) {
 				switch(base[k]) {
-				case NOP0:
-					base[k] = NOP1;
+				case Code.NOP0:
+					base[k] = Code.NOP1;
 					break;
-				case NOP1:
-					base[k] = NOP0;
+				case Code.NOP1:
+					base[k] = Code.NOP0;
 					break;
 				default:
 					throw new IllegalArgumentException("Invalid template type");
