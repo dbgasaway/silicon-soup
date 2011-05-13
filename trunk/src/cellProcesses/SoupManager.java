@@ -27,13 +27,15 @@ public class SoupManager {
 		return soup[ix];
 	}
 	
-	/**sets the value at ix with val in the soup
+	/**sets the value at ix with val in the soup, if c has permission to do so, or if c is null
 	 * @param ix - the locate to set
 	 * @param val - value to set (ix) to
+	 * @param c - the calling cell, or null
 	 * @return if the operation was successful*/
-	public boolean setValue(int ix, byte val) {
+	public boolean setValue(int ix, byte val, Cell c) {
 		ix = ix % SOUP_SIZE;
-		if(getLockVal(ix)) {
+		c.setHead(c.getHead() % SOUP_SIZE);
+		if(getLockVal(ix) && (ix <= c.getHead() || ix >= c.getHead() + c.getSize() + c.getAlloc()) || c == null) {
 			return false;
 		} else {
 			soup[ix] = val;
@@ -78,7 +80,7 @@ public class SoupManager {
 		int ix = allocate(c.getSize());
 		cells.addFirst(c);
 		for(int i = 0; i < c.getSize(); i++) {
-			setValue(ix + i, c.getCode().getCode()[i]);
+			setValue(ix + i, c.getCode().getCode()[i], null);
 			setLockVal(ix + i, true);
 		}
 		int loc = Collections.binarySearch(codes, c.getCode());
@@ -254,5 +256,69 @@ public class SoupManager {
 		this.addCell(this.getRange(c.getHead() + c.getSize(), c.getHead() + c.getSize() + c.getAlloc()));
 		c.setAlloc(0);
 	}
-
+	
+	private static final int RAND_FEED = 0;
+	private static final int CONST_FEED = 1;
+	private static final int BASE_FEED = 30;
+	
+	private static int feedType = RAND_FEED;
+	
+	/**Cycles through the cell queue once*/
+	public void act() {
+		for(Cell c : cells) {
+			int cycles = 0;
+			switch(feedType) {
+			case RAND_FEED:
+				cycles = (int)(BASE_FEED * 2 * Math.random());
+				break;
+			case CONST_FEED:
+				cycles = BASE_FEED;
+				break;
+			default:
+				throw new IllegalArgumentException("Invalid feed type: " + feedType);
+			}
+			c.act(cycles);
+		}
+	}
+	
+	/**Returns the top 10 most populous genes in the soup*/
+	public String[] getTopGenes() {
+		ArrayList<Code> list = new ArrayList<Code>();
+		ArrayList<Integer> amounts = new ArrayList<Integer>();
+		for(Cell c : cells) {
+			int ix = list.lastIndexOf(c.getCode());
+			if(ix == -1) {
+				list.add(c.getCode());
+				amounts.add(1);
+			} else {
+				amounts.set(ix, amounts.get(ix) + 1);
+			}
+		}
+		int[] tops = new int[10];
+		Arrays.fill(tops, 0);
+		Code[] topCodes = new Code[10];
+		for(int n = 0; n < amounts.size(); n++) {
+			int i = amounts.get(n);
+			for(int k = 0; k < tops.length ; k++) {
+				if(i > tops[k]) {
+					for(int j = tops.length - 1; j <= k; j--) {
+						tops[j] = tops[j - 1];
+						topCodes[j] = topCodes[j - 1];
+					}
+					tops[k] = i;
+					topCodes[k] = list.get(n);
+				}
+			}
+		}
+		String[] ret = new String[10];
+		for(int i = 0; i < ret.length; i++) {
+			Code item = topCodes[i];
+			if(item != null) {
+				ret[i] = item.getFullName() + " " + tops[i];
+			} else {
+				ret[i] = "null";
+			}
+		}
+		return ret;
+	}
 }
