@@ -17,6 +17,10 @@ public class Code implements Comparable<Code> {
 		return name;
 	}
 
+	public String getFullName() {
+		return instr.length + name;
+	}
+	
 	@Override
 	public int compareTo(Code c) {
 		if(this.instr.length != c.instr.length) {

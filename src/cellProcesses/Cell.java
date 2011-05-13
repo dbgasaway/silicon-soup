@@ -241,7 +241,7 @@ class CPU {
         		//TODO:move down death queue one slot
         		 break;
         	 case MOVEIXBA:
-        		 soup.setValue(a, soup.getValue(b));
+        		 soup.setValue(a, soup.getValue(b), cell);
         		 ip++;
         		 break;
         	 case LOADAB:
