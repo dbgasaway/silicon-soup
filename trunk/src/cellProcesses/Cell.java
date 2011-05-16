@@ -7,6 +7,8 @@ public class Cell {
         private int head;
         private int size;
         private CPU cpu;
+        /**start of area of mem allocation, or -1 if none*/
+        private int malLoc;
         private int alloc;
         private SoupManager soup;
         
@@ -17,6 +19,7 @@ public class Cell {
                 this.soup = soup;
                 cpu = null;
                 alloc = 0;
+                malLoc = -1;
         }
         
         public void activate() {
@@ -29,6 +32,10 @@ public class Cell {
         
         public int getSize() {
         	return this.size;
+        }
+        
+        public int getMalLoc() {
+        	return malLoc;
         }
         
         public void setAlloc(int a) {
@@ -51,14 +58,16 @@ public class Cell {
         	return c;
         }
         
-        public boolean allocate(int size) {
+        /**Allocates memory and returns the address of its start, or -1 if not successful*/
+        public int allocate(int size) {
         	int ix = soup.allocate(this, size + alloc);
+        	malLoc = ix;
         	if(ix == -1) {
-        		return false;
+        		return -1;
         	} else {
-        		//TODO: make it so <code>alloc += size</code> works right
+        		//TODO: (or not, seems to not be correct, maybe just drop allocate space) make it so <code>alloc += size</code> works right
         		alloc = size;
-        		return true;
+        		return ix;
         	}
         }
 }
@@ -194,7 +203,6 @@ class CPU {
         		 }
         		 break;
         	 case Code.DIVIDE:
-        		 //TODO:implement division: daughter is put last in time queue
         		 soup.splitCell(cell);
         		 ip++;
         		//TODO:move down death queue one slot
@@ -210,10 +218,9 @@ class CPU {
         		 this.d = this.c;
         		 break;
         	 case Code.ALLOC:
-        		 if(c > 0 || cell.getAlloc() == c) {
-        			 //TODO:implement memory allocation, should put new address in a and the new address may not always be continuous
-        			 cell.allocate(c);
-        			 a = cell.getHead() + cell.getSize();
+        		 if(c > 0 || cell.getAlloc() != c) {
+        			 //TODO:implement memory properly: not contiguous always
+        			 a = cell.allocate(c);
         		 }
         		 ip++;
         		 //TODO:move down death queue one slot
