@@ -114,6 +114,31 @@ public class SoupManager {
 		addCell(new Cell(d, 0, range.length, this));
 	}
 	
+	private void addExistingCell(int head, int size) {
+		byte[] range = getRange(head, head + size - 1);
+		boolean isSame = false;
+		Code d = null;
+		for(int i = 0; i < codes.size(); i++) {
+			d = codes.get(i);
+			if(Arrays.equals(range, d.getCode())) {
+				isSame = true;
+				break;
+			}
+		}
+		if(isSame) {
+			d = new Code(range, d.getName());
+		} else {
+			d = new Code(range, names[range.length]);
+			names[range.length] = incName(range.length);
+		}
+		Cell c = new Cell(d, head, size, this);
+		cells.addFirst(c);
+		for(int i = 0; i < c.getSize(); i++) {
+			setLockVal(head + i, true);
+		}
+		c.activate();
+	}
+	
 	/**Shuffles the names so each code gets a unique name, and returns the new name;*/
 	private String incName(int length) {
 		String str = names[length];
@@ -180,6 +205,16 @@ public class SoupManager {
 		return -1;
 	}
 	
+	/**returns the address of a contiguous space of size size*/
+	private int findAndCreateSpace(int size) {
+		int ix = findSpace(size);
+		while(ix == -1) {
+			killTop();
+			ix = findSpace(size);
+		}
+		return ix;
+	}
+	
 	/**Returns the contiguous free space at ix*/
 	private int getSpaceAt(int ix) {
 		int count = 0;
@@ -196,6 +231,7 @@ public class SoupManager {
 	/**Returns the range of values in the soup from ix to iy, circularly. iy must be
 	 *  greater than ix and the difference must be less that the soup size*/
 	public byte[] getRange(int ix, int iy) {
+		if(ix >= iy) System.out.println("ERROR : false precondition");
 		byte[] ret = new byte[iy - ix];
 		int i;
 		for(i = 0; ix <= iy; ix++, i++) {
@@ -211,10 +247,16 @@ public class SoupManager {
 	/**Allocates memory for a cell
 	 * @param c - cell to find memory for
 	 * @param size - size of space to allocate
-	 * @return address of the end of the allocated space, or -1 on failure*/
+	 * @return address of the start of the allocated space, or -1 on failure*/
 	public int allocate(Cell c, int size) {
 		if(size > MAX_MEM_ALLOC_RATIO * c.getSize()) return -1;
-		int head = c.getHead();
+		int ix = findAndCreateSpace(size);
+		if(c.getMalLoc() != -1) {
+			releaseMem(c.getMalLoc(), c.getAlloc());
+		}
+		protectMem(ix, size);
+		return ix;
+		/*int head = c.getHead();
 		int space = getSpaceAt(head);
 		if(space >= size) {
 			c.setAlloc(space);
@@ -232,10 +274,9 @@ public class SoupManager {
 				c.setAlloc(space);
 			}
 		}
-		//TODO:make it so cells allocate in chunks and not all at once
 		releaseMem(head + c.getSize(), c.getAlloc());
 		protectMem(head + c.getSize(), c.getSize() + space);
-		return head + space;
+		return head + c.getSize();*/
 	}
 	
 	/**Kills the cell at the top of the kill queue*/
@@ -255,7 +296,8 @@ public class SoupManager {
 
 	/**makes a new cell*/
 	public void splitCell(Cell c) {
-		this.addCell(this.getRange(c.getHead() + c.getSize(), c.getHead() + c.getSize() + c.getAlloc()));
+		releaseMem(c.getMalLoc(), c.getAlloc());
+		this.addExistingCell(c.getMalLoc(), c.getAlloc());
 		c.setAlloc(0);
 	}
 	
@@ -300,6 +342,8 @@ public class SoupManager {
 				amounts.set(ix, amounts.get(ix) + 1);
 			}
 		}
+		//TODO: check correct reporting of population
+		System.out.println(cells.toArray());
 		//System.out.println(amounts.size() + " " + list.size());
 		int[] tops = new int[10];
 		Arrays.fill(tops, 0);
@@ -314,15 +358,15 @@ public class SoupManager {
 					}
 					tops[k] = i;
 					topCodes[k] = list.get(n);
+					break;
 				}
 			}
 			amounts.remove(n);
 			list.remove(n);
 			n--;
 		}
-		//TODO: make not repeat only org
 		String[] ret = new String[10];
-		System.out.println(Arrays.toString(topCodes));
+		//System.out.println(Arrays.toString(topCodes));
 		for(int i = 0; i < ret.length; i++) {
 			Code item = topCodes[i];
 			if(item != null) {
