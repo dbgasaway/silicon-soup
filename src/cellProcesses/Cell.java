@@ -46,6 +46,11 @@ public class Cell {
         	return alloc;
         }
         
+        public boolean isInAlloc(int ix) {
+        	return((ix >= head && ix < head + size) ||
+        			(ix >= malLoc && ix < malLoc + alloc));
+        }
+        
         public int getHead() {
         	return head;
         }
@@ -104,7 +109,7 @@ class CPU {
                 	byte b = soup.getValue(ip);
                 	this.execute(b);
                 	this.cycles--;
-                	//System.out.println("Cycle: " + cycles + ", IP: " + ip);
+                	System.out.println("Cycle: " + this.cycles + ", IP: " + ip + ", b: " + b);
                 }
         }
         
@@ -126,194 +131,201 @@ class CPU {
         		return stack[sp + 1];
         	}*/
         	int x = stack[sp];
-        	sp = (sp - 1) % stack.length;
+        	sp--;
+        	if(sp < 0) sp += stack.length;
         	return x;
         }
 
         private void execute(byte by) {
-        	 byte[] template;
-        	 int ix;
-        	 int p;
-        	 switch(by) {
-        	 case Code.ZERO:
-        		 c = 0;
-        		 ip++;
-        		 break;
-        	 case Code.SUBACB:
-        		 this.c = c - a;
-        		 ip++;
-        		 break;
-        	 case Code.SUBACA:
-        		 this.a = c - a;
-        		 ip++;
-        		 break;
-        	 case Code.JUMP:
-        		 template = this.getTemplate();
-        		 ix = search(template, OUT);
-        		 if(ix != ip) {
-        			 ip = ix + template.length;
-        		 } else {
-        			 ip += template.length;
-        		 }
-        	 case Code.JUMPF:
-        		 template = this.getTemplate();
-        		 ix = search(template, FORWARD);
-        		 if(ix != ip) {
-        			 ip = ix + template.length;
-        		 } else {
-        			 ip += template.length;
-        		 }
-        	 case Code.JUMPB:
-        		 template = this.getTemplate();
-        		 ix = search(template, BACK);
-        		 if(ix != ip) {
-        			 ip = ix + template.length;
-        		 } else {
-        			 ip += template.length;
-        		 }
-        		 break;
-        	 case Code.SEARCH:
-        		 template = this.getTemplate();
-        		 ix = search(template, OUT);
-        		 if(ix != ip) {
-        			 ip += template.length;
-            		 c = template.length;
-        		 } else {
-        			 ip++;
-        		 }
-        	 case Code.SEARCHB:
-        		 template = this.getTemplate();
-        		 ix = search(template, BACK);
-        		 a = ix;
-        		 if(ix != ip) {
-        			 ip += template.length;
-            		 c = template.length;
-        		 } else {
-        			 ip++;
-        		 }
-        	 case Code.SEARCHF:
-        		 template = this.getTemplate();
-        		 ix = search(template, FORWARD);
-        		 a = ix;
-        		 if(ix != ip) {
-        			 ip += template.length;
-            		 c = template.length;
-        		 } else {
-        			 ip++;
-        		 }
-        		 break;
-        	 case Code.DIVIDE:
-        		 soup.splitCell(cell);
-        		 ip++;
+        	//System.out.println(by);
+        	byte[] template;
+        	int ix;
+        	int p;
+        	switch(by) {
+        	case Code.ZERO:
+        		c = 0;
+        		ip++;
+        		break;
+        	case Code.SUBACB:
+        		this.c = c - a;
+        		ip++;
+        		break;
+        	case Code.SUBACA:
+        		this.a = c - a;
+        		ip++;
+        		break;
+        	case Code.JUMP:
+        		template = this.getTemplate();
+        		System.out.println(Arrays.toString(template));
+        		ix = search(template, OUT);
+        		if(ix != ip) {
+        			ip = ix + template.length;
+        		} else {
+        			ip += template.length;
+        		}
+        	case Code.JUMPF:
+        		template = this.getTemplate();
+        		ix = search(template, FORWARD);
+        		if(ix != ip) {
+        			ip = ix + template.length;
+        		} else {
+        			ip += template.length;
+        		}
+        	case Code.JUMPB:
+        		template = this.getTemplate();
+        		ix = search(template, BACK);
+        		if(ix != ip) {
+        			ip = ix + template.length;
+        		} else {
+        			ip += template.length;
+        		}
+        		break;
+        	case Code.SEARCH:
+        		template = this.getTemplate();
+        		ix = search(template, OUT);
+        		if(ix != ip) {
+        			ip += template.length;
+        			c = template.length;
+        		} else {
+        			ip++;
+        		}
+        	case Code.SEARCHB:
+        		template = this.getTemplate();
+        		ix = search(template, BACK);
+        		a = ix;
+        		if(ix != ip) {
+        			ip += template.length;
+        			c = template.length;
+        		} else {
+        			ip++;
+        		}
+        	case Code.SEARCHF:
+        		template = this.getTemplate();
+        		ix = search(template, FORWARD);
+        		a = ix;
+        		if(ix != ip) {
+        			ip += template.length;
+        			c = template.length;
+        		} else {
+        			ip++;
+        		}
+        		break;
+        	case Code.DIVIDE:
+        		if(cell.getAlloc() > 0){
+        			soup.splitCell(cell);
+        		}
+        		ip++;
         		//TODO:move down death queue one slot
-        		 break;
-        	 case Code.MOVEIXBA:
-        		 soup.setValue(a, soup.getValue(b), cell);
-        		 ip++;
-        		 break;
-        	 case Code.LOADAB:
-        		 this.b = this.a;
-        		 break;
-        	 case Code.LOADCD:
-        		 this.d = this.c;
-        		 break;
-        	 case Code.ALLOC:
-        		 if(c > 0 || cell.getAlloc() != c) {
-        			 //TODO:implement memory properly: not contiguous always
-        			 a = cell.allocate(c);
-        		 }
-        		 ip++;
-        		 //TODO:move down death queue one slot
-        		 break;
-        	 case Code.PUSHA:
-        		 push(a);
-        		 ip++;
-        		 break;
-        	 case Code.PUSHB:
-        		 push(by);
-        		 ip++;
-        		 break;
-        	 case Code.PUSHC:
-        		 push(c);
-        		 ip++;
-        		 break;
-        	 case Code.PUSHD:
-        		 push(d);
-        		 ip++;
-        		 break;
-        	 case Code.POPA:
-        		 p = pop();
-        		 if(p < 0) p = 0;
-        		 a = p;
-        		 ip++;
-        		 break;
-        	 case Code.POPB:
-        		 p = pop();
-        		 if(p < 0) p = 0;
-        		 this.b = p;
-        		 ip++;
-        		 break;
-        	 case Code.POPC:
-        		 p = pop();
-        		 if(p < 0) p = 0;
-        		 c = p;
-        		 ip++;
-        		 break;
-        	 case Code.POPD:
-        		 p = pop();
-        		 if(p < 0) p = 0;
-        		 d = p;
-        		 ip++;
-        		 break;
-        	 case Code.INCA:
-        		 a++;
-        		 ip++;
-        		 break;
-        	 case Code.INCB:
-        		 b++;
-        		 ip++;
-        		 break;
-        	 case Code.INCC:
-        		 c++;
-        		 ip++;
-        		 break;
-        	 case Code.DECC:
-        		 c--;
-        		 ip++;
-        		 break;
-        	 case Code.NOT0C:
-        		 c = c ^ a;
-        		 ip++;
-        		 break;
-        	 case Code.LSHIFTC:
-        		 c = c << 1;
-        		 ip++;
-        		 break;
-        	 case Code.IFCZ:
-        		 if(c == 0) {
-        			 ip++;
-        		 } else {
-        			 ip += 2;
-        		 }
-        		 break;
-        	 case Code.CALL:
-        		 template = this.getTemplate();
-        		 c = template.length;
-        		 ix = search(template, OUT);
-        		 push(ip + template.length + 1);
-        		 ip += template.length + ix;
-        		 break;
-        	 case Code.RET:
-        		 ix = pop();
-        		 if(ix < 0) {
-        			 ix = 0;
-        		 }
-        		 ip = ix;
-        		 break;
-        	 default:
-        		 ip++;
-        		 break;
-        	 }
+        		break;
+        	case Code.MOVEIXBA:
+        		soup.setValue(a, soup.getValue(b), cell);
+        		ip++;
+        		break;
+        	case Code.LOADAB:
+        		this.b = this.a;
+        		ip++;
+        		break;
+        	case Code.LOADCD:
+        		this.d = this.c;
+        		ip++;
+        		break;
+        	case Code.ALLOC:
+        		if(c > 0 || cell.getAlloc() != c) {
+        			//TODO:implement memory properly: not contiguous always
+        			a = cell.allocate(c);
+        		}
+        		ip++;
+        		//TODO:move down death queue one slot
+        		break;
+        	case Code.PUSHA:
+        		push(a);
+        		ip++;
+        		break;
+        	case Code.PUSHB:
+        		push(by);
+        		ip++;
+        		break;
+        	case Code.PUSHC:
+        		push(c);
+        		ip++;
+        		break;
+        	case Code.PUSHD:
+        		push(d);
+        		ip++;
+        		break;
+        	case Code.POPA:
+        		p = pop();
+        		if(p < 0) p = 0;
+        		a = p;
+        		ip++;
+        		break;
+        	case Code.POPB:
+        		p = pop();
+        		if(p < 0) p = 0;
+        		this.b = p;
+        		ip++;
+        		break;
+        	case Code.POPC:
+        		p = pop();
+        		if(p < 0) p = 0;
+        		c = p;
+        		ip++;
+        		break;
+        	case Code.POPD:
+        		p = pop();
+        		if(p < 0) p = 0;
+        		d = p;
+        		ip++;
+        		break;
+        	case Code.INCA:
+        		a++;
+        		ip++;
+        		break;
+        	case Code.INCB:
+        		b++;
+        		ip++;
+        		break;
+        	case Code.INCC:
+        		c++;
+        		ip++;
+        		break;
+        	case Code.DECC:
+        		c--;
+        		ip++;
+        		break;
+        	case Code.NOT0C:
+        		c = c ^ a;
+        		ip++;
+        		break;
+        	case Code.LSHIFTC:
+        		c = c << 1;
+        		ip++;
+        		break;
+        	case Code.IFCZ:
+        		if(c == 0) {
+        			ip++;
+        		} else {
+        			ip += 2;
+        		}
+        		break;
+        	case Code.CALL:
+        		template = this.getTemplate();
+        		c = template.length;
+        		ix = search(template, OUT);
+        		push(ip + template.length + 1);
+        		ip += template.length + ix;
+        		break;
+        	case Code.RET:
+        		ix = pop();
+        		if(ix < 0) {
+        			ix = 0;
+        		}
+        		ip = ix;
+        		break;
+        	default:
+        		ip++;
+        		break;
+        	}
         }
 
         /**The valid template values. One searches for the inverse of the template after
@@ -335,6 +347,7 @@ class CPU {
 					break;
 				}
 			}
+			i--;
 			byte[] base = soup.getRange(ip + 1, ip + i);
 			for(int k = 0; k < base.length; k++) {
 				switch(base[k]) {

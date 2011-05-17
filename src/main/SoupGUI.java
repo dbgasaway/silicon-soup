@@ -19,6 +19,7 @@ public class SoupGUI extends JFrame implements Runnable {
 	private SoupManager s;
 	private JPanel p;
 	private final JTextArea t;
+	private final JTextArea totalCycles;
 	private final JButton b;
 	private Stack<Cell> cells;
 	private Stack<byte[]> codes;
@@ -38,6 +39,12 @@ public class SoupGUI extends JFrame implements Runnable {
 		t.setEditable(false);
 		t.setLineWrap(false);
 		
+		totalCycles = new JTextArea();
+		totalCycles.setColumns(12);
+		totalCycles.setRows(1);
+		totalCycles.setEditable(false);
+		totalCycles.setLineWrap(false);
+		
 		b = new JButton("START/STOP");
 		b.addActionListener(new ActionListener() {
 			@Override
@@ -48,6 +55,7 @@ public class SoupGUI extends JFrame implements Runnable {
 		});
 		
 		p.add(t);
+		p.add(totalCycles);
 		p.add(b);
 
 		s = new SoupManager();
@@ -86,6 +94,7 @@ public class SoupGUI extends JFrame implements Runnable {
 				}
 				//System.out.println(tx);
 				t.setText(tx);
+				totalCycles.setText("Cycles: " + s.getCycles());
 			} else {
 				Object o = new Object();
 				synchronized(o) {
