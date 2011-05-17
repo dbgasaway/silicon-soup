@@ -8,6 +8,7 @@ public class SoupManager {
 	private LinkedList<Cell> cells;
 	private ArrayList<Code> codes;
 	private String[] names;
+	private long cycles;
 	
 	private static final int SOUP_SIZE = 10000;
 	
@@ -19,10 +20,13 @@ public class SoupManager {
 		codes = new ArrayList<Code>();
 		names = new String[10000];
 		Arrays.fill(names, "aaa");
+		cycles = 0;
 	}
 	
 	/**returns the value at ix with circular memory*/
 	public byte getValue(int ix) {
+		//System.out.println(-1 % 5); // results in -1?
+		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % SOUP_SIZE;
 		return soup[ix];
 	}
@@ -37,7 +41,7 @@ public class SoupManager {
 		if(c != null) {
 			c.setHead(c.getHead() % SOUP_SIZE);
 		}
-		if(getLockVal(ix) && (ix <= c.getHead() || ix >= c.getHead() + c.getSize() + c.getAlloc()) || c == null) {
+		if(getLockVal(ix) && !c.isInAlloc(ix) && c!= null) {
 			return false;
 		} else {
 			soup[ix] = val;
@@ -90,6 +94,7 @@ public class SoupManager {
 			codes.add(-(loc + 1),c.getCode());
 		}
 		c.activate();
+		//System.out.println("activated");
 		return true;
 	}
 	
@@ -231,8 +236,8 @@ public class SoupManager {
 	/**Returns the range of values in the soup from ix to iy, circularly. iy must be
 	 *  greater than ix and the difference must be less that the soup size*/
 	public byte[] getRange(int ix, int iy) {
-		if(ix >= iy) System.out.println("ERROR : false precondition");
-		byte[] ret = new byte[iy - ix];
+		if(ix >= iy) System.out.println("ERROR : false precondition, ix: " + ix + ", iy: "+ iy);
+		byte[] ret = new byte[iy - ix + 1];
 		int i;
 		for(i = 0; ix <= iy; ix++, i++) {
 			ret[i] = this.getValue(ix);
@@ -310,6 +315,7 @@ public class SoupManager {
 	/**Cycles through the cell queue once*/
 	public void act() {
 		for(Cell c : cells) {
+			//TODO: fix concurrency issues
 			//System.out.println("Cell start!");
 			int cycles = 0;
 			switch(feedType) {
@@ -325,6 +331,7 @@ public class SoupManager {
 			//System.out.println("Cell mid");
 			c.act(cycles);
 			//System.out.println("Cell done!");
+			this.cycles++;
 		}
 	}
 	
@@ -343,7 +350,7 @@ public class SoupManager {
 			}
 		}
 		//TODO: check correct reporting of population
-		System.out.println(cells.toArray());
+		System.out.println("cells: " + cells);
 		//System.out.println(amounts.size() + " " + list.size());
 		int[] tops = new int[10];
 		Arrays.fill(tops, 0);
@@ -376,5 +383,9 @@ public class SoupManager {
 			}
 		}
 		return ret;
+	}
+	
+	public long getCycles() {
+		return cycles;
 	}
 }
