@@ -1,14 +1,17 @@
 package cellProcesses;
 
 import java.util.*;
+import java.util.concurrent.*;
+
 
 public class SoupManager {
 	private byte[] soup;
 	private boolean[] lockedMem;
-	private LinkedList<Cell> cells;
+	private LinkedBlockingDeque<Cell> cells;
 	private ArrayList<Code> codes;
 	private String[] names;
 	private long cycles;
+	//private LinkedList<Cell> newCells;
 	
 	private static final int SOUP_SIZE = 10000;
 	
@@ -16,7 +19,7 @@ public class SoupManager {
 		soup = new byte[SOUP_SIZE];
 		lockedMem = new boolean[SOUP_SIZE];
 		Arrays.fill(lockedMem, false);
-		cells = new LinkedList<Cell>();
+		cells = new LinkedBlockingDeque<Cell>();
 		codes = new ArrayList<Code>();
 		names = new String[10000];
 		Arrays.fill(names, "aaa");
@@ -58,6 +61,7 @@ public class SoupManager {
 	/**sets the value at ix with val in the memory protection array*/
 	private void setLockVal(int ix, boolean val) {
 		ix = ix % lockedMem.length;
+		while(ix < 0) ix += lockedMem.length;
 		lockedMem[ix] = val;
 	}
 	
@@ -234,9 +238,12 @@ public class SoupManager {
 	}
 
 	/**Returns the range of values in the soup from ix to iy, circularly. iy must be
-	 *  greater than ix and the difference must be less that the soup size*/
+	 *  greater than ix and the difference must be less that the soup size. If 
+	 *  iy is not greater than ix then it returns an empty array*/
 	public byte[] getRange(int ix, int iy) {
-		if(ix >= iy) System.out.println("ERROR : false precondition, ix: " + ix + ", iy: "+ iy);
+		/*if(ix >= iy) {
+			//System.out.println("ERROR : false precondition, ix: " + ix + ", iy: "+ iy);
+		}*/
 		byte[] ret = new byte[iy - ix + 1];
 		int i;
 		for(i = 0; ix <= iy; ix++, i++) {
