@@ -39,7 +39,7 @@ public class Cell {
         }
         
         public void setAlloc(int a) {
-        	this.alloc += a;
+        	this.alloc = a;
         }
         
         public int getAlloc() {
@@ -109,7 +109,7 @@ class CPU {
                 	byte b = soup.getValue(ip);
                 	this.execute(b);
                 	this.cycles--;
-                	System.out.println("Cycle: " + this.cycles + ", IP: " + ip + ", b: " + b);
+                	//System.out.println("Cycle: " + this.cycles + ", IP: " + ip + ", b: " + b);
                 }
         }
         
@@ -156,7 +156,7 @@ class CPU {
         		break;
         	case Code.JUMP:
         		template = this.getTemplate();
-        		System.out.println(Arrays.toString(template));
+        		//System.out.println(Arrays.toString(template));
         		ix = search(template, OUT);
         		if(ix != ip) {
         			ip = ix + template.length;
@@ -230,8 +230,7 @@ class CPU {
         		ip++;
         		break;
         	case Code.ALLOC:
-        		if(c > 0 || cell.getAlloc() != c) {
-        			//TODO:implement memory properly: not contiguous always
+        		if(c > 0 && cell.getAlloc() != c) {
         			a = cell.allocate(c);
         		}
         		ip++;
