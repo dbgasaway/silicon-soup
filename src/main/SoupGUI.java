@@ -41,7 +41,7 @@ public class SoupGUI extends JFrame implements Runnable {
 		
 		totalCycles = new JTextArea();
 		totalCycles.setColumns(12);
-		totalCycles.setRows(1);
+		totalCycles.setRows(2);
 		totalCycles.setEditable(false);
 		totalCycles.setLineWrap(false);
 		
@@ -94,7 +94,7 @@ public class SoupGUI extends JFrame implements Runnable {
 				}
 				//System.out.println(tx);
 				t.setText(tx);
-				totalCycles.setText("Cycles: " + s.getCycles());
+				totalCycles.setText("Cycles: " + s.getCycles() + "\nTotal Cells: " + s.getTotalCells());
 			} else {
 				Object o = new Object();
 				synchronized(o) {

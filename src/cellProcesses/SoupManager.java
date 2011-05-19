@@ -1,17 +1,15 @@
 package cellProcesses;
 
 import java.util.*;
-import java.util.concurrent.*;
-
 
 public class SoupManager {
 	private byte[] soup;
 	private boolean[] lockedMem;
-	private LinkedBlockingDeque<Cell> cells;
+	private LinkedList<Cell> cells;
 	private ArrayList<Code> codes;
 	private String[] names;
 	private long cycles;
-	//private LinkedList<Cell> newCells;
+	private ListIterator<Cell> i;
 	
 	private static final int SOUP_SIZE = 10000;
 	
@@ -19,11 +17,12 @@ public class SoupManager {
 		soup = new byte[SOUP_SIZE];
 		lockedMem = new boolean[SOUP_SIZE];
 		Arrays.fill(lockedMem, false);
-		cells = new LinkedBlockingDeque<Cell>();
+		cells = new LinkedList<Cell>();
 		codes = new ArrayList<Code>();
 		names = new String[10000];
 		Arrays.fill(names, "aaa");
 		cycles = 0;
+		i = cells.listIterator();
 	}
 	
 	/**returns the value at ix with circular memory*/
@@ -88,7 +87,9 @@ public class SoupManager {
 	/**Adds a cell to the soup, and returns if it was successful*/
 	public boolean addCell(Cell c) {
 		int ix = allocate(c.getSize());
-		cells.addFirst(c);
+		if(cells.size() > 0) i.previous();
+		i.add(c);
+		if(i.nextIndex() < cells.size()) i.next();
 		for(int i = 0; i < c.getSize(); i++) {
 			setValue(ix + i, c.getCode().getCode()[i], null);
 			setLockVal(ix + i, true);
@@ -141,7 +142,9 @@ public class SoupManager {
 			names[range.length] = incName(range.length);
 		}
 		Cell c = new Cell(d, head, size, this);
-		cells.addFirst(c);
+		i.previous();
+		i.add(c);
+		i.next();
 		for(int i = 0; i < c.getSize(); i++) {
 			setLockVal(head + i, true);
 		}
@@ -293,7 +296,17 @@ public class SoupManager {
 	
 	/**Kills the cell at the top of the kill queue*/
 	public void killTop() {
-		Cell c = cells.removeLast();
+		Cell c;
+		int ix = i.previousIndex();
+		System.out.println("Running Total Cells: " + cells.size());
+		i = cells.listIterator(cells.size());
+		c = i.previous();
+		if(i.nextIndex() != ix) {
+			i.remove();
+		} else if(cells.size() > 1) {
+			c = i.previous();
+			i.remove();
+		}
 		releaseMem(c.getHead(), c.getSize() + c.getAlloc());
 	}
 
@@ -301,9 +314,12 @@ public class SoupManager {
 	 * @param ix - the start of the area to be freed, inclusive
 	 * @param size - the size of the area to free*/
 	private void releaseMem(int ix, int size) {
+		System.out.println("Releasing: size: " + size + ", ix: " + ix);
+		//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, ix, ix + size)));
 		for(int i = 0; i < size; i++, ix++) {
 			setLockVal(ix, false);
 		}
+		//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, ix, ix + size)));
 	}
 
 	/**makes a new cell*/
@@ -321,7 +337,9 @@ public class SoupManager {
 	
 	/**Cycles through the cell queue once*/
 	public void act() {
-		for(Cell c : cells) {
+		i = cells.listIterator();
+		while(i.hasNext()) {
+			Cell c = i.next();
 			//TODO: fix concurrency issues
 			//System.out.println("Cell start!");
 			int cycles = 0;
@@ -336,7 +354,14 @@ public class SoupManager {
 				throw new IllegalArgumentException("Invalid feed type: " + feedType);
 			}
 			//System.out.println("Cell mid");
-			c.act(cycles);
+			try {
+				c.act(cycles);
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 0, 200)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 0, 200)));
+				System.exit(1);
+			}
 			//System.out.println("Cell done!");
 			this.cycles++;
 		}
@@ -357,7 +382,7 @@ public class SoupManager {
 			}
 		}
 		//TODO: check correct reporting of population
-		System.out.println("cells: " + cells);
+		//System.out.println("cells: " + cells);
 		//System.out.println(amounts.size() + " " + list.size());
 		int[] tops = new int[10];
 		Arrays.fill(tops, 0);
@@ -394,5 +419,9 @@ public class SoupManager {
 	
 	public long getCycles() {
 		return cycles;
+	}
+	
+	public int getTotalCells() {
+		return cells.size();
 	}
 }
