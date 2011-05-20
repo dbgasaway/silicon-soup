@@ -96,7 +96,7 @@ class CPU {
                 this.b = 0;
                 this.c = 0;
                 this.d = 0;
-                this.stack = new int[5];
+                this.stack = new int[10];
                 Arrays.fill(stack, 0);
                 this.cycles = 0;
                 this.soup = soup;
@@ -118,6 +118,7 @@ class CPU {
         	/*if(sp >= stack.length - 1) return false;
         	sp++;
         	stack[sp] = val;*/
+        	//System.out.println("push at: " + ip);
         	stack[sp] = val;
         	sp = (sp + 1) % stack.length;
         	return true;
@@ -130,14 +131,17 @@ class CPU {
         		sp--;
         		return stack[sp + 1];
         	}*/
-        	int x = stack[sp];
+        	//System.out.println("pop at: " + ip);
         	sp--;
         	if(sp < 0) sp += stack.length;
+        	int x = stack[sp];
         	return x;
         }
 
         private void execute(byte by) {
         	//System.out.println(by);
+        	ip = ip % soup.getSoupSize();
+        	//System.out.println(ip);
         	byte[] template;
         	int ix;
         	int p;
@@ -146,36 +150,39 @@ class CPU {
         		c = 0;
         		ip++;
         		break;
-        	case Code.SUBACB:
-        		this.c = c - a;
+        	case Code.SUBBAC:
+        		this.c = a - b;
         		ip++;
         		break;
-        	case Code.SUBACA:
-        		this.a = c - a;
+        	case Code.SUBCAA:
+        		this.a = a - c;
         		ip++;
         		break;
         	case Code.JUMP:
         		template = this.getTemplate();
         		//System.out.println(Arrays.toString(template));
         		ix = search(template, OUT);
+        		//System.out.println("JUMP IX: " + ix);
         		if(ix != ip) {
-        			ip = ix + template.length;
+        			ip = ix;
         		} else {
         			ip += template.length;
         		}
+        		break;
         	case Code.JUMPF:
         		template = this.getTemplate();
         		ix = search(template, FORWARD);
         		if(ix != ip) {
-        			ip = ix + template.length;
+        			ip = ix;
         		} else {
         			ip += template.length;
         		}
+        		break;
         	case Code.JUMPB:
         		template = this.getTemplate();
         		ix = search(template, BACK);
         		if(ix != ip) {
-        			ip = ix + template.length;
+        			ip = ix;
         		} else {
         			ip += template.length;
         		}
@@ -186,31 +193,35 @@ class CPU {
         		if(ix != ip) {
         			ip += template.length;
         			c = template.length;
+        			a = ix;
         		} else {
         			ip++;
         		}
+        		break;
         	case Code.SEARCHB:
         		template = this.getTemplate();
         		ix = search(template, BACK);
-        		a = ix;
         		if(ix != ip) {
         			ip += template.length;
         			c = template.length;
+            		a = ix;
         		} else {
         			ip++;
         		}
+        		break;
         	case Code.SEARCHF:
         		template = this.getTemplate();
         		ix = search(template, FORWARD);
-        		a = ix;
         		if(ix != ip) {
         			ip += template.length;
         			c = template.length;
+            		a = ix;
         		} else {
         			ip++;
         		}
         		break;
         	case Code.DIVIDE:
+        		//System.out.println("malLoc: " + cell.getMalLoc() + ", alloc: " + cell.getAlloc());
         		if(cell.getAlloc() > 0){
         			soup.splitCell(cell);
         		}
@@ -218,6 +229,7 @@ class CPU {
         		//TODO:move down death queue one slot
         		break;
         	case Code.MOVEIXBA:
+        		//System.out.println("Moving: a: " + a + ", b: " + b);
         		soup.setValue(a, soup.getValue(b), cell);
         		ip++;
         		break;
@@ -230,7 +242,9 @@ class CPU {
         		ip++;
         		break;
         	case Code.ALLOC:
+        		//System.out.println("ALLOC: c: " + c);
         		if(c > 0 && cell.getAlloc() != c) {
+        			//if(c != 80) throw new IllegalArgumentException("Incorrect Size at: " + ip);
         			a = cell.allocate(c);
         		}
         		ip++;
@@ -293,7 +307,7 @@ class CPU {
         		ip++;
         		break;
         	case Code.NOT0C:
-        		c = c ^ a;
+        		c = c ^ 1;
         		ip++;
         		break;
         	case Code.LSHIFTC:
@@ -301,6 +315,7 @@ class CPU {
         		ip++;
         		break;
         	case Code.IFCZ:
+        		//System.out.println("IFZC: c: " + c);
         		if(c == 0) {
         			ip++;
         		} else {
@@ -309,12 +324,14 @@ class CPU {
         		break;
         	case Code.CALL:
         		template = this.getTemplate();
-        		c = template.length;
         		ix = search(template, OUT);
-        		push(ip + template.length + 1);
-        		ip += template.length + ix;
+        		//System.out.println("CALL: ix: " + ix);
+        		//System.out.println("TemplateLength: " + template.length);
+        		push(ip + template.length);
+        		ip = ix;
         		break;
         	case Code.RET:
+        		//System.out.println("stack at " + sp + ": " + Arrays.toString(stack));
         		ix = pop();
         		if(ix < 0) {
         			ix = 0;
@@ -368,7 +385,7 @@ class CPU {
 		private static final int BACK = -1;
 		private static final int MAX_TEMPLATE_SIZE = 10;
 		
-		/**returns the index of the nearest template
+		/**returns the index of the byte after the nearest template
 		 * @param template - the template to search for
 		 * @param i - the search method: -1 is back, 0 is out, 1 is forward
 		 * @return the index of the nearest template, or ip if none is found or the template is too big*/
@@ -389,30 +406,33 @@ class CPU {
         	if(template.length == 0) return ip;
         	int a = searchBack(template);
         	int b = searchForward(template);
-        	if(soup.getDist(a, ip) < soup.getDist(b, ip)) {
+        	//System.out.println("Fdist: " + a + ", Bdist: " + b);
+        	if(soup.getDist(a, ip) < soup.getDist(b - template.length, ip)) {
         		return a;
         	} else {
         		return b;
         	}
 		}
 
-		/**Returns the index of the nearest template after the ip*/
+		/**Returns the index of the byte after the nearest template after the ip*/
 		private int searchBack(byte[] template) {
         	if(template.length == 0) return ip;
-			for(int i = -1; i > -soup.getSoupSize(); i--) {
-				if(Arrays.equals(template, soup.getRange(ip + i - template.length, ip + i))) {
-					return ip + i - template.length;
+			for(int i = 1; i < soup.getSoupSize(); i++) {
+				if(Arrays.equals(template, soup.getRange(ip - i - template.length + 1, ip - i))) {
+					//System.out.println("newloc: " + (ip - i + 1));
+					return ip - i + 1;
 				}
 			}
+			//System.out.println();
 			return ip;
 		}
 		
-		/**Returns the index of the nearest template after the ip*/
+		/**Returns the index of the byte after the nearest template after the ip*/
 		private int searchForward(byte[] template) {
         	if(template.length == 0) return ip;
-			for(int i = 1; i < soup.getSoupSize(); i++) {
-				if(Arrays.equals(template, soup.getRange(ip + i, ip + i + template.length))) {
-					return ip + i - template.length;
+			for(int i = template.length; i < soup.getSoupSize(); i++) {
+				if(Arrays.equals(template, soup.getRange(ip + i, ip + i + template.length - 1))) {
+					return ip + i + template.length;
 				}
 			}
 			return ip;
