@@ -9,8 +9,8 @@ public class Code implements Comparable<Code> {
     /**NOP and template value*/
     public static final byte NOP1 = 1;
     public static final byte ZERO = 2;
-    public static final byte SUBACB = 3;
-    public static final byte SUBACA = 23;
+    public static final byte SUBBAC = 3;
+    public static final byte SUBCAA = 23;
     public static final byte JUMPF = 4;
     public static final byte JUMP = 5;
     public static final byte JUMPB = 6;
@@ -41,9 +41,9 @@ public class Code implements Comparable<Code> {
     public static final byte RET = 32;
     
     /**contains all valid instructions*/
-    public static final byte[] VALID_INSTRUCTIONS = {NOP0, NOP1, ZERO, SUBACB, 
+    public static final byte[] VALID_INSTRUCTIONS = {NOP0, NOP1, ZERO, SUBBAC, 
     	JUMPF, JUMP, JUMPB, SEARCHF, SEARCHB, SEARCH, DIVIDE, MOVEIXBA, LOADAB, 
-    	ALLOC, PUSHA, PUSHB, PUSHC, POPA, POPB, POPC, PUSHD, POPD, LOADCD, SUBACA,
+    	ALLOC, PUSHA, PUSHB, PUSHC, POPA, POPB, POPC, PUSHD, POPD, LOADCD, SUBCAA,
     	INCA, INCB, INCC, DECC, NOT0C, LSHIFTC, IFCZ, CALL, RET
     };
 	

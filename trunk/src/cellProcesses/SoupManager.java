@@ -39,6 +39,7 @@ public class SoupManager {
 	 * @param c - the calling cell, or null
 	 * @return if the operation was successful*/
 	public boolean setValue(int ix, byte val, Cell c) {
+		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % SOUP_SIZE;
 		if(c != null) {
 			c.setHead(c.getHead() % SOUP_SIZE);
@@ -53,6 +54,7 @@ public class SoupManager {
 	
 	/**returns the locked status at ix assuming circular memory*/
 	public boolean getLockVal(int ix) {
+		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % lockedMem.length;
 		return lockedMem[ix];
 	}
@@ -66,7 +68,9 @@ public class SoupManager {
 	
 	/**returns the distance between two addresses in circular memory*/
 	public int getDist(int ix, int iy) {
+		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % SOUP_SIZE;
+		while(iy < 0) iy += SOUP_SIZE;
 		iy = iy % SOUP_SIZE;
 		return Math.abs(ix - iy);
 	}
@@ -126,6 +130,7 @@ public class SoupManager {
 	
 	private void addExistingCell(int head, int size) {
 		byte[] range = getRange(head, head + size - 1);
+		//System.out.println("rangelenght: " + range.length);
 		boolean isSame = false;
 		Code d = null;
 		for(int i = 0; i < codes.size(); i++) {
@@ -140,6 +145,10 @@ public class SoupManager {
 		} else {
 			d = new Code(range, names[range.length]);
 			names[range.length] = incName(range.length);
+		}
+		int loc = Collections.binarySearch(codes, d);
+		if(loc < 0) {
+			codes.add(-(loc + 1),d);
 		}
 		Cell c = new Cell(d, head, size, this);
 		i.previous();
@@ -360,6 +369,10 @@ public class SoupManager {
 				e.printStackTrace();
 				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 0, 200)));
 				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 0, 200)));
+				System.out.println("Some codes:");
+				for(byte[] b : get10Codes()) {
+					System.out.println(Arrays.toString(b));
+				}
 				System.exit(1);
 			}
 			//System.out.println("Cell done!");
@@ -382,6 +395,7 @@ public class SoupManager {
 			}
 		}
 		//TODO: check correct reporting of population
+		System.out.println("Total codes: " + codes.size());
 		//System.out.println("cells: " + cells);
 		//System.out.println(amounts.size() + " " + list.size());
 		int[] tops = new int[10];
@@ -423,5 +437,13 @@ public class SoupManager {
 	
 	public int getTotalCells() {
 		return cells.size();
+	}
+	
+	public byte[][] get10Codes() {
+		byte[][] ret = new byte[10][];
+		for(int i = 0; i < ret.length && i < codes.size(); i++) {
+			ret[i] = codes.get(i).getCode();
+		}
+		return ret;
 	}
 }
