@@ -8,6 +8,7 @@ import javax.swing.*;
 import cellProcesses.Cell;
 import cellProcesses.SoupManager;
 
+import java.util.Arrays;
 import java.util.Stack;
 
 public class SoupGUI extends JFrame implements Runnable {
@@ -41,7 +42,7 @@ public class SoupGUI extends JFrame implements Runnable {
 		
 		totalCycles = new JTextArea();
 		totalCycles.setColumns(12);
-		totalCycles.setRows(2);
+		totalCycles.setRows(5);
 		totalCycles.setEditable(false);
 		totalCycles.setLineWrap(false);
 		
@@ -51,6 +52,11 @@ public class SoupGUI extends JFrame implements Runnable {
 			public void actionPerformed(ActionEvent e) {
 				isRunning = !isRunning;
 				System.out.println("Running= " + isRunning);
+				if(!isRunning) {
+					for(byte[] b : s.get10Codes()) {
+						System.out.println(Arrays.toString(b));
+					}
+				}
 			}
 		});
 		
@@ -83,10 +89,10 @@ public class SoupGUI extends JFrame implements Runnable {
 					s.addCell(codes.pop());
 				}
 				//System.out.println("Cleared new Cells2");
-				for(int i = 0; i < 100; i++) {
+				for(int i = 0; i < 1; i++) {
 					s.act();
 				}
-				System.out.println("acted");
+				//System.out.println("acted");
 				String tx = "";
 				String[] lines = s.getTopGenes();
 				for(String str : lines) {
@@ -94,7 +100,10 @@ public class SoupGUI extends JFrame implements Runnable {
 				}
 				//System.out.println(tx);
 				t.setText(tx);
-				totalCycles.setText("Cycles: " + s.getCycles() + "\nTotal Cells: " + s.getTotalCells());
+				totalCycles.setText("Cycles: " + s.getCycles()
+						+ "\nTotal Cells: " + s.getTotalCells()
+						+ "\nTotal Codes: " + s.getTotalCodes()
+						+ "\nAllocated Space: " + s.getAllocatedSpace());
 			} else {
 				Object o = new Object();
 				synchronized(o) {
