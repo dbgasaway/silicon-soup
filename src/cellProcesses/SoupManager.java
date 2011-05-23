@@ -83,11 +83,6 @@ public class SoupManager {
 		return SOUP_SIZE;
 	}
 	
-	/**Rearranges soup memory to increase contiguous space*/
-	private void garbageCollect() {
-		//TODO: arranges memory to increase contiguous space
-	}
-	
 	/**Adds a cell to the soup, and returns if it was successful*/
 	public boolean addCell(Cell c) {
 		int ix = allocate(c.getSize());
@@ -130,7 +125,7 @@ public class SoupManager {
 	
 	private void addExistingCell(int head, int size) {
 		byte[] range = getRange(head, head + size - 1);
-		//System.out.println("rangelenght: " + range.length);
+		//System.out.println("rangelength: " + range.length);
 		boolean isSame = false;
 		Code d = null;
 		for(int i = 0; i < codes.size(); i++) {
@@ -198,13 +193,10 @@ public class SoupManager {
 		ix = findSpace(size);
 		if(ix != -1) {
 			return ix;
-		} else {
-			garbageCollect();		
 		}
 		ix = findSpace(size);
 		while(ix == -1) {
 			killTop();
-			garbageCollect();
 			ix = findSpace(size);
 		}
 		return ix;
@@ -316,6 +308,7 @@ public class SoupManager {
 			c = i.previous();
 			i.remove();
 		}
+		System.out.println("Killed top");
 		releaseMem(c.getHead(), c.getSize() + c.getAlloc());
 	}
 
@@ -324,6 +317,7 @@ public class SoupManager {
 	 * @param size - the size of the area to free*/
 	private void releaseMem(int ix, int size) {
 		System.out.println("Releasing: size: " + size + ", ix: " + ix);
+		if(size != 80 && size != 0) throw new IllegalArgumentException("Invalid size: " + size);
 		//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, ix, ix + size)));
 		for(int i = 0; i < size; i++, ix++) {
 			setLockVal(ix, false);
@@ -331,6 +325,12 @@ public class SoupManager {
 		//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, ix, ix + size)));
 	}
 
+	private int minCellSize = 12;
+	
+	public int getMinCellSize() {
+		return minCellSize;
+	}
+	
 	/**makes a new cell*/
 	public void splitCell(Cell c) {
 		releaseMem(c.getMalLoc(), c.getAlloc());
@@ -342,14 +342,13 @@ public class SoupManager {
 	private static final int CONST_FEED = 1;
 	private static final int BASE_FEED = 30;
 	
-	private static int feedType = RAND_FEED;
+	private static int feedType = CONST_FEED;
 	
 	/**Cycles through the cell queue once*/
 	public void act() {
 		i = cells.listIterator();
 		while(i.hasNext()) {
 			Cell c = i.next();
-			//TODO: fix concurrency issues
 			//System.out.println("Cell start!");
 			int cycles = 0;
 			switch(feedType) {
@@ -395,7 +394,7 @@ public class SoupManager {
 			}
 		}
 		//TODO: check correct reporting of population
-		System.out.println("Total codes: " + codes.size());
+		//System.out.println("Total codes: " + codes.size());
 		//System.out.println("cells: " + cells);
 		//System.out.println(amounts.size() + " " + list.size());
 		int[] tops = new int[10];
@@ -439,11 +438,23 @@ public class SoupManager {
 		return cells.size();
 	}
 	
+	public int getTotalCodes() {
+		return codes.size();
+	}
+	
 	public byte[][] get10Codes() {
 		byte[][] ret = new byte[10][];
 		for(int i = 0; i < ret.length && i < codes.size(); i++) {
 			ret[i] = codes.get(i).getCode();
 		}
 		return ret;
+	}
+	
+	public int getAllocatedSpace() {
+		int count = 0;
+		for(int i = 0; i < lockedMem.length; i++) {
+			if(lockedMem[i]) count++;
+		}
+		return count;
 	}
 }

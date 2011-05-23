@@ -1,5 +1,7 @@
 package cellProcesses;
 
+import java.util.Arrays;
+
 public class Code implements Comparable<Code> {
 	private String name;
 	private byte[] instr;
@@ -76,5 +78,15 @@ public class Code implements Comparable<Code> {
 	@Override
 	public String toString() {
 		return this.getFullName();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if(o instanceof Code) {
+			Code c = (Code)o;
+			return Arrays.equals(getCode(), c.getCode());
+		} else {
+			throw new IllegalArgumentException("Invalid Object: " + o);
+		}
 	}
 }
