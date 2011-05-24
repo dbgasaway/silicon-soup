@@ -1,6 +1,7 @@
 package cellProcesses;
 
 import java.util.*;
+import comparators.*;
 
 public class SoupManager {
 	private byte[] soup;
@@ -256,6 +257,16 @@ public class SoupManager {
 		return ret;
 	}
 	
+	/**inclusive, fails if ix is more than iy*/
+	public boolean[] getLockRange(int ix, int iy) {
+		boolean[] ret = new boolean[iy - ix + 1];
+		int i;
+		for(i = 0; ix <= iy; ix++, i++) {
+			ret[i] = this.getLockVal(ix);
+		}
+		return ret;
+	}
+	
 	/**Amount of memory a cell can allocate relative to its size (e.g. 3 means a cell can allocate
 	 *  three times its size in memory*/
 	private static final double MAX_MEM_ALLOC_RATIO = 3;
@@ -299,7 +310,7 @@ public class SoupManager {
 	public void killTop() {
 		Cell c;
 		int ix = i.previousIndex();
-		System.out.println("Running Total Cells: " + cells.size());
+		System.out.println("KILL: Running Total Cells: " + cells.size());
 		i = cells.listIterator(cells.size());
 		c = i.previous();
 		if(i.nextIndex() != ix) {
@@ -309,7 +320,8 @@ public class SoupManager {
 			i.remove();
 		}
 		System.out.println("Killed top");
-		releaseMem(c.getHead(), c.getSize() + c.getAlloc());
+		releaseMem(c.getHead(), c.getSize());
+		releaseMem(c.getMalLoc(), c.getAlloc());
 	}
 
 	/**Deallocates memory
@@ -366,8 +378,14 @@ public class SoupManager {
 				c.act(cycles);
 			} catch(Exception e) {
 				e.printStackTrace();
-				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 0, 200)));
-				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 0, 200)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 0, 80)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 0, 80)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 80, 160)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 80, 160)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 160, 240)));
+				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 160, 240)));
+				int[][] comp = SequenceAlignment.findEditDistance(Arrays.copyOfRange(soup, 0, 80), Arrays.copyOfRange(soup, 160, 240));
+				System.out.println(SequenceAlignment.findOptimalComparison(comp, Arrays.copyOfRange(soup, 0, 80), Arrays.copyOfRange(soup, 160, 240)));
 				System.out.println("Some codes:");
 				for(byte[] b : get10Codes()) {
 					System.out.println(Arrays.toString(b));
