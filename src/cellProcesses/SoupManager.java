@@ -1,24 +1,26 @@
 package cellProcesses;
 
 import java.util.*;
-import comparators.*;
+//import comparators.*;
 
 public class SoupManager {
 	private byte[] soup;
 	private boolean[] lockedMem;
 	private LinkedList<Cell> cells;
+	private LinkedList<Cell> deathList;
 	private ArrayList<Code> codes;
 	private String[] names;
 	private long cycles;
 	private ListIterator<Cell> i;
 	
-	private static final int SOUP_SIZE = 10000;
+	private static final int SOUP_SIZE = 50000;
 	
 	public SoupManager() {
 		soup = new byte[SOUP_SIZE];
 		lockedMem = new boolean[SOUP_SIZE];
 		Arrays.fill(lockedMem, false);
 		cells = new LinkedList<Cell>();
+		deathList = new LinkedList<Cell>();
 		codes = new ArrayList<Code>();
 		names = new String[10000];
 		Arrays.fill(names, "aaa");
@@ -89,6 +91,7 @@ public class SoupManager {
 		int ix = allocate(c.getSize());
 		if(cells.size() > 0) i.previous();
 		i.add(c);
+		deathList.addFirst(c);
 		if(i.nextIndex() < cells.size()) i.next();
 		for(int i = 0; i < c.getSize(); i++) {
 			setValue(ix + i, c.getCode().getCode()[i], null);
@@ -124,7 +127,13 @@ public class SoupManager {
 		addCell(new Cell(d, 0, range.length, this));
 	}
 	
+	private double flipMutationRate = 300;
+	private double addMutationrate = 300;
+	private double subMutationRate = 300;
+	
+	/**Adds a cell to the cell list that already has its code in the soup*/
 	private void addExistingCell(int head, int size) {
+		//TODO: descent with modification
 		byte[] range = getRange(head, head + size - 1);
 		//System.out.println("rangelength: " + range.length);
 		boolean isSame = false;
@@ -147,9 +156,12 @@ public class SoupManager {
 			codes.add(-(loc + 1),d);
 		}
 		Cell c = new Cell(d, head, size, this);
+		//System.out.println(cells);
 		i.previous();
 		i.add(c);
 		i.next();
+		deathList.addFirst(c);
+		//System.out.println(cells);
 		for(int i = 0; i < c.getSize(); i++) {
 			setLockVal(head + i, true);
 		}
@@ -257,7 +269,8 @@ public class SoupManager {
 		return ret;
 	}
 	
-	/**inclusive, fails if ix is more than iy*/
+	/**Gets a range of values in the allocation table, inclusive, 
+	 * fails if ix is more than iy*/
 	public boolean[] getLockRange(int ix, int iy) {
 		boolean[] ret = new boolean[iy - ix + 1];
 		int i;
@@ -308,28 +321,46 @@ public class SoupManager {
 	
 	/**Kills the cell at the top of the kill queue*/
 	public void killTop() {
+		/*System.out.println("Killer: " + i.previous());
+		i.next();*/
+		//System.out.println(cells);
+		//System.out.println(deathList);
 		Cell c;
-		int ix = i.previousIndex();
-		System.out.println("KILL: Running Total Cells: " + cells.size());
-		i = cells.listIterator(cells.size());
+		//int ix = i.previousIndex();
+		//System.out.println("KILL: Running Total Cells: " + cells.size());
+		/*i = cells.listIterator(cells.size());*/
 		c = i.previous();
-		if(i.nextIndex() != ix) {
+		Cell c2 = deathList.getLast();
+		if(c2 != c) {
+			cells.remove(c2);
+			deathList.removeLast();
+		} else {
+			ListIterator<Cell> k = deathList.listIterator(deathList.size() - 1);
+			c2 = k.previous();
+			cells.remove(c2);
+			deathList.remove(c2);
+		}
+		/*if(i.nextIndex() != ix) {
 			i.remove();
 		} else if(cells.size() > 1) {
 			c = i.previous();
 			i.remove();
-		}
-		System.out.println("Killed top");
-		releaseMem(c.getHead(), c.getSize());
-		releaseMem(c.getMalLoc(), c.getAlloc());
+		}*/
+		//System.out.println("Killed top at: " + c.getHead() + ", with size: " + c.getSize());
+		releaseMem(c2.getHead(), c2.getSize());
+		if(c2.getAlloc() != 0) releaseMem(c2.getMalLoc(), c2.getAlloc());
+		i = cells.listIterator(cells.lastIndexOf(c));
+		i.next();
+		//System.out.println(cells);
+		//System.out.println(deathList);
 	}
 
 	/**Deallocates memory
 	 * @param ix - the start of the area to be freed, inclusive
 	 * @param size - the size of the area to free*/
 	private void releaseMem(int ix, int size) {
-		System.out.println("Releasing: size: " + size + ", ix: " + ix);
-		if(size != 80 && size != 0) throw new IllegalArgumentException("Invalid size: " + size);
+		//System.out.println("Releasing: size: " + size + ", ix: " + ix);
+		//if(size != 80 && size != 0) throw new IllegalArgumentException("Invalid size: " + size);
 		//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, ix, ix + size)));
 		for(int i = 0; i < size; i++, ix++) {
 			setLockVal(ix, false);
@@ -337,17 +368,32 @@ public class SoupManager {
 		//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, ix, ix + size)));
 	}
 
+	/**Smallest size of a cell*/
 	private int minCellSize = 12;
 	
 	public int getMinCellSize() {
 		return minCellSize;
 	}
 	
-	/**makes a new cell*/
+	/**makes a new cell
+	 * @param c - the cell that is replicating*/
 	public void splitCell(Cell c) {
 		releaseMem(c.getMalLoc(), c.getAlloc());
 		this.addExistingCell(c.getMalLoc(), c.getAlloc());
 		c.setAlloc(0);
+		shiftDownCellDeath(c);
+	}
+	
+	/**Moves the cell  down the death list 1 spot, if possible*/
+	public void shiftDownCellDeath(Cell c) {
+		int ix = deathList.lastIndexOf(c);
+		if(ix != 0) {
+			ListIterator<Cell> k = deathList.listIterator(ix);
+			k.next();
+			k.remove();
+			k.previous();
+			k.add(c);
+		}
 	}
 	
 	private static final int RAND_FEED = 0;
@@ -378,17 +424,17 @@ public class SoupManager {
 				c.act(cycles);
 			} catch(Exception e) {
 				e.printStackTrace();
-				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 0, 80)));
-				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 0, 80)));
-				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 80, 160)));
-				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 80, 160)));
-				System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 160, 240)));
-				System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 160, 240)));
-				int[][] comp = SequenceAlignment.findEditDistance(Arrays.copyOfRange(soup, 0, 80), Arrays.copyOfRange(soup, 160, 240));
-				System.out.println(SequenceAlignment.findOptimalComparison(comp, Arrays.copyOfRange(soup, 0, 80), Arrays.copyOfRange(soup, 160, 240)));
+				//System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 0, 80)));
+				//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 0, 80)));
+				//System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 80, 160)));
+				//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 80, 160)));
+				//System.out.println(Arrays.toString(Arrays.copyOfRange(soup, 160, 240)));
+				//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 160, 240)));
+				//int[][] comp = SequenceAlignment.findEditDistance(Arrays.toString(Arrays.copyOfRange(soup, 0, 80)), Arrays.toString(Arrays.copyOfRange(soup, 160, 240)));
+				//System.out.println(SequenceAlignment.findOptimalString(comp, Arrays.toString(Arrays.copyOfRange(soup, 0, 80)), Arrays.toString(Arrays.copyOfRange(soup, 160, 240))));
 				System.out.println("Some codes:");
 				for(byte[] b : get10Codes()) {
-					System.out.println(Arrays.toString(b));
+					if(b != null) System.out.println(Arrays.toString(b));
 				}
 				System.exit(1);
 			}
@@ -411,7 +457,6 @@ public class SoupManager {
 				amounts.set(ix, amounts.get(ix) + 1);
 			}
 		}
-		//TODO: check correct reporting of population
 		//System.out.println("Total codes: " + codes.size());
 		//System.out.println("cells: " + cells);
 		//System.out.println(amounts.size() + " " + list.size());

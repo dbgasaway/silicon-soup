@@ -22,6 +22,7 @@ public class Cell {
                 malLoc = -1;
         }
         
+        /**Gives the cell a cpu*/
         public void activate() {
         	cpu = new CPU(head, soup, this);
         }
@@ -46,6 +47,7 @@ public class Cell {
         	return alloc;
         }
         
+        /**returns true if ix is in the cell's memory space*/
         public boolean isInAlloc(int ix) {
         	return((ix >= head && ix < head + size) ||
         			(ix >= malLoc && ix < malLoc + alloc));
@@ -70,10 +72,14 @@ public class Cell {
         	if(ix == -1) {
         		return -1;
         	} else {
-        		//TODO: (or not, seems to not be correct, maybe just drop allocate space) make it so <code>alloc += size</code> works right
+        		//TODO: check to see if specification conforms, it just resets now
         		alloc = size;
         		return ix;
         	}
+        }
+        
+        public String toString() {
+        	return "Head: " + getHead() + ", code: " + c;
         }
 }
 
@@ -84,6 +90,7 @@ class CPU {
         private int b;
         private int c;
         private int d;
+        /**a circular stack*/
         private int[] stack;
         private int cycles;
         private Cell cell;
@@ -113,7 +120,7 @@ class CPU {
                 }
         }
         
-        /**pushes val on the stack, returns false on failure (if stack is full) and true otherwise*/
+        /**pushes val on the stack, returns false on failure and true otherwise*/
         private boolean push(int val) {
         	/*if(sp >= stack.length - 1) return false;
         	sp++;
@@ -124,6 +131,7 @@ class CPU {
         	return true;
         }
         
+        /**takes the top value of the stack*/
         private int pop() {
         	/*if(sp <= 0) {
         		return -1;
@@ -138,6 +146,7 @@ class CPU {
         	return x;
         }
 
+        /**Performs the action given by the given byte code*/
         private void execute(byte by) {
         	//System.out.println("BY:" + by);
         	ip = ip % soup.getSoupSize();
@@ -231,10 +240,9 @@ class CPU {
         			soup.splitCell(cell);
         		}
         		ip++;
-        		//TODO:move down death queue one slot
         		break;
         	case Code.MOVEIXBA:
-        		//System.out.println("Moving: a: " + a + ", b: " + b);
+        		//System.out.println("Moving: a: " + a + ", b: " + b + ", head: " + cell.getHead());
         		boolean worked = soup.setValue(a, soup.getValue(b), cell);
         		if(!worked) System.out.println("MOV: memwrite failure: IP: " + ip + ", at: " + a  + ", with a head at: " + cell.getHead());
         		ip++;
@@ -254,15 +262,15 @@ class CPU {
         			//if(c != 80) throw new IllegalArgumentException("Incorrect Size at: " + ip);
         			a = cell.allocate(c);
         		}
+        		if(a > 0) soup.shiftDownCellDeath(cell);
         		ip++;
-        		//TODO:move down death queue one slot
         		break;
         	case Code.PUSHA:
         		push(a);
         		ip++;
         		break;
         	case Code.PUSHB:
-        		push(by);
+        		push(b);
         		ip++;
         		break;
         	case Code.PUSHC:
@@ -274,6 +282,7 @@ class CPU {
         		ip++;
         		break;
         	case Code.POPA:
+        		//System.out.println(Arrays.toString(stack));
         		p = pop();
         		if(p < 0) p = 0;
         		a = p;
@@ -409,6 +418,7 @@ class CPU {
         	}
 		}
 
+        /**Searches for the template outwards, and returns the address of the closest one*/
 		private int searchOut(byte[] template) {
         	if(template.length == 0) return ip;
         	int a = searchBack(template);
