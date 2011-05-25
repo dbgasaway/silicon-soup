@@ -14,6 +14,7 @@ public class SiliconSoup {
 		t.start();
 	}
 	
+	/**Code for the example cell*/
 	private static final byte[] BASE_CELL_CODE = {Code.NOP1, Code.NOP1, Code.NOP1, 
 		Code.NOP1, Code.ZERO, Code.NOT0C, Code.LSHIFTC, Code.LSHIFTC, Code.LOADCD, 
 		Code.SEARCHB, Code.NOP0, Code.NOP0, Code.NOP0, Code.NOP0, Code.SUBCAA, 

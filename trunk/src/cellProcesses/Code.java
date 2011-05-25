@@ -1,6 +1,7 @@
 package cellProcesses;
 
 import java.util.Arrays;
+//import java.util.HashMap;
 
 public class Code implements Comparable<Code> {
 	private String name;
@@ -42,6 +43,8 @@ public class Code implements Comparable<Code> {
     public static final byte CALL = 31;
     public static final byte RET = 32;
     
+    //TODO:use this: public HashMap<Byte, String> s;
+    
     /**contains all valid instructions*/
     public static final byte[] VALID_INSTRUCTIONS = {NOP0, NOP1, ZERO, SUBBAC, 
     	JUMPF, JUMP, JUMPB, SEARCHF, SEARCHB, SEARCH, DIVIDE, MOVEIXBA, LOADAB, 
@@ -66,7 +69,89 @@ public class Code implements Comparable<Code> {
 		return instr.length + name;
 	}
 	
+	public static String getCodeName(byte b) {
+		switch(b) {
+		case NOP0:
+			return "NOP0";
+		case NOP1:
+			return "NOP1";
+		case ZERO:
+			return "ZERO";
+		case SUBBAC:
+			return "SUBBAC";
+		case JUMPF:
+			return "JUMPF";
+		case JUMP:
+			return "JUMP";
+		case JUMPB:
+			return "JUMPB";
+		case SEARCHF:
+			return "SEARCHF";
+		case SEARCHB:
+			return "SEARCHB";
+		case SEARCH:
+			return "SEARCH";
+		case DIVIDE:
+			return "DIVIDE";
+		case MOVEIXBA:
+			return "MOVEIXBA";
+		case LOADAB:
+			return "LOADAB";
+		case ALLOC:
+			return "ALLOC";
+		case PUSHA:
+			return "PUSHA";
+		case PUSHB:
+			return "PUSHB";
+		case PUSHC:
+			return "PUSHC";
+		case POPA:
+			return "POPA";
+		case POPB:
+			return "POPB";
+		case POPC:
+			return "POPC";
+		case PUSHD:
+			return "PUSHD";
+		case POPD:
+			return "POPD";
+		case LOADCD:
+			return "LOADCD";
+		case SUBCAA:
+			return "SUBCAA";
+		case INCA:
+			return "INCA";
+		case INCB:
+			return "INCB";
+		case INCC:
+			return "INCC";
+		case DECC:
+			return "DECC";
+		case NOT0C:
+			return "NOT0C";
+		case LSHIFTC:
+			return "LSHIFTC";
+		case IFCZ:
+			return "IFCZ";
+		case CALL:
+			return "CALL";
+		case RET:
+			return "RET";
+		default:
+			return Byte.toString(b);
+		}
+	}
+	
+	public static String[] getCodeNameList(byte[] data) {
+		String[] ret = new String[data.length];
+		for(int i = 0; i < data.length; i++) {
+			ret[i] = getCodeName(data[i]);
+		}
+		return ret;
+	}
+	
 	@Override
+	/**Compares two codes, first by length, and then by name*/
 	public int compareTo(Code c) {
 		if(this.instr.length != c.instr.length) {
 			return this.instr.length - c.instr.length;
@@ -81,6 +166,7 @@ public class Code implements Comparable<Code> {
 	}
 	
 	@Override
+	/**Compares the code part of two codes only*/
 	public boolean equals(Object o) {
 		if(o instanceof Code) {
 			Code c = (Code)o;
