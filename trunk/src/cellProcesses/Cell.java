@@ -162,8 +162,8 @@ class CPU {
         	case Code.SUBBAC:
         		this.c = a - b;
         		if(c > 90) {
-        			System.out.println("SUB: Big c of: " + c + ", with: ip: " + ip + ", a: " + a + ", b: " + b + ", head: " + cell.getHead());
-        			System.out.println(Arrays.toString(soup.getRange(cell.getHead() - 5, ip)));
+        			//System.out.println("SUB: Big c of: " + c + ", with: ip: " + ip + ", a: " + a + ", b: " + b + ", head: " + cell.getHead());
+        			//cell.gSystem.out.println(Arrays.toString(soup.getRange(cell.getHead() - 5, ip)));
         			//System.out.println(Arrays.toString(soup.getLockRange(cell.getHead() - 5, ip)));
         		}
         		ip++;
@@ -244,7 +244,7 @@ class CPU {
         	case Code.MOVEIXBA:
         		//System.out.println("Moving: a: " + a + ", b: " + b + ", head: " + cell.getHead());
         		boolean worked = soup.setValue(a, soup.getValue(b), cell);
-        		if(!worked) System.out.println("MOV: memwrite failure: IP: " + ip + ", at: " + a  + ", with a head at: " + cell.getHead());
+        		//if(!worked) System.out.println("MOV: memwrite failure: IP: " + ip + ", at: " + a  + ", with a head at: " + cell.getHead());
         		ip++;
         		break;
         	case Code.LOADAB:
@@ -258,7 +258,7 @@ class CPU {
         	case Code.ALLOC:
         		//System.out.println("ALLOC: c: " + c);
         		if(c > 0 && cell.getAlloc() != c) {
-        			if(c != 80 && c != 0) System.out.println("ALLOC: Big c of: " + c + ", at: " + ip + ", with a head at: " + cell.getHead());
+        			//if(c != 80 && c != 0) System.out.println("ALLOC: Big c of: " + c + ", at: " + ip + ", with a head at: " + cell.getHead());
         			//if(c != 80) throw new IllegalArgumentException("Incorrect Size at: " + ip);
         			a = cell.allocate(c);
         		}
