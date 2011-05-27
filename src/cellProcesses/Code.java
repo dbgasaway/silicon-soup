@@ -43,6 +43,8 @@ public class Code implements Comparable<Code> {
     public static final byte CALL = 31;
     public static final byte RET = 32;
     
+    public static final int BITS = 5;
+    
     //TODO:use this: public HashMap<Byte, String> s;
     
     /**contains all valid instructions*/
@@ -140,6 +142,17 @@ public class Code implements Comparable<Code> {
 		default:
 			return Byte.toString(b);
 		}
+	}
+	
+	public static byte bitMutate(byte b) {
+		byte mask = 1;
+		int shift = (int)(BITS * Math.random());
+		mask = (byte)(mask << shift);
+		return (byte)(b ^ mask);
+	}
+	
+	public static byte getRandomCode() {
+		return (byte)(Math.random() * VALID_INSTRUCTIONS.length);
 	}
 	
 	public static String[] getCodeNameList(byte[] data) {

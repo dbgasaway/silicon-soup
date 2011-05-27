@@ -127,14 +127,40 @@ public class SoupManager {
 		addCell(new Cell(d, 0, range.length, this));
 	}
 	
+	/*mutation rates are per gene, 1/x*/
 	private double flipMutationRate = 300;
-	private double addMutationrate = 300;
+	private double addMutationRate = 300;
 	private double subMutationRate = 300;
 	
-	/**Adds a cell to the cell list that already has its code in the soup*/
-	private void addExistingCell(int head, int size) {
+	/**Adds a cell to the cell list that already has its code in the soup,
+	 * and mutates the new cell*/
+	private void addExistingCell(Cell parent, int head, int size) {
 		//TODO: descent with modification
+		ArrayList<Byte> data = new ArrayList<Byte>();
 		byte[] range = getRange(head, head + size - 1);
+		for(byte by : range) {
+			data.add(by);
+		}
+		for(int i = 0; i < data.size(); i++) {
+			if((int)(Math.random() * flipMutationRate) == 0) {
+				data.set(i, Code.getRandomCode());
+			}
+			if((int)(Math.random() * addMutationRate) == 0) {
+				data.add(i, Code.getRandomCode());
+				i++;
+			}
+			if((int)(Math.random() * subMutationRate) == 0) {
+				data.remove(i);
+				i--;
+			}
+		}
+		range = new byte[data.size()];
+		for(int i = 0; i < data.size(); i++) {
+			range[i] = data.get(i);
+		}
+		for(int i = 0; i < range.length; i++) {
+			setValue(head + i, range[i], parent);
+		}
 		//System.out.println("rangelength: " + range.length);
 		boolean isSame = false;
 		Code d = null;
@@ -155,14 +181,14 @@ public class SoupManager {
 		if(loc < 0) {
 			codes.add(-(loc + 1),d);
 		}
-		Cell c = new Cell(d, head, size, this);
+		Cell c = new Cell(d, head, range.length, this);
 		//System.out.println(cells);
 		i.previous();
 		i.add(c);
 		i.next();
 		deathList.addFirst(c);
 		//System.out.println(cells);
-		for(int i = 0; i < c.getSize(); i++) {
+		for(int i = 0; i < range.length; i++) {
 			setLockVal(head + i, true);
 		}
 		c.activate();
@@ -282,7 +308,7 @@ public class SoupManager {
 	
 	/**Amount of memory a cell can allocate relative to its size (e.g. 3 means a cell can allocate
 	 *  three times its size in memory*/
-	private static final double MAX_MEM_ALLOC_RATIO = 3;
+	private static final double MAX_MEM_ALLOC_RATIO = 2;
 	
 	/**Allocates memory for a cell
 	 * @param c - cell to find memory for
@@ -321,8 +347,8 @@ public class SoupManager {
 	
 	/**Kills the cell at the top of the kill queue*/
 	public void killTop() {
-		/*System.out.println("Killer: " + i.previous());
-		i.next();*/
+		//System.out.println("Killer: " + i.previous());
+		//i.next();
 		//System.out.println(cells);
 		//System.out.println(deathList);
 		Cell c;
@@ -335,8 +361,15 @@ public class SoupManager {
 			cells.remove(c2);
 			deathList.removeLast();
 		} else {
-			ListIterator<Cell> k = deathList.listIterator(deathList.size() - 1);
+			ListIterator<Cell> k = null;
+			//try {
+			k = deathList.listIterator(deathList.size() - 1);
 			c2 = k.previous();
+			/*} catch(NoSuchElementException e) {
+				System.out.println(cells);
+				System.out.println(deathList);
+				e.printStackTrace();
+			}*/
 			cells.remove(c2);
 			deathList.remove(c2);
 		}
@@ -379,7 +412,7 @@ public class SoupManager {
 	 * @param c - the cell that is replicating*/
 	public void splitCell(Cell c) {
 		releaseMem(c.getMalLoc(), c.getAlloc());
-		this.addExistingCell(c.getMalLoc(), c.getAlloc());
+		this.addExistingCell(c, c.getMalLoc(), c.getAlloc());
 		c.setAlloc(0);
 		shiftDownCellDeath(c);
 	}
