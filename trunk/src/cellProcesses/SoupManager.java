@@ -45,6 +45,7 @@ public class SoupManager {
 		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % SOUP_SIZE;
 		if(c != null) {
+			while(c.getHead() < 0) c.setHead(c.getHead() + SOUP_SIZE);
 			c.setHead(c.getHead() % SOUP_SIZE);
 		}
 		if(getLockVal(ix) && !c.isInAlloc(ix) && c!= null) {
@@ -141,6 +142,7 @@ public class SoupManager {
 		for(byte by : range) {
 			data.add(by);
 		}
+		//long time = System.nanoTime();
 		for(int i = 0; i < data.size(); i++) {
 			if((int)(Math.random() * flipMutationRate) == 0) {
 				data.set(i, Code.getRandomCode());
@@ -154,13 +156,16 @@ public class SoupManager {
 				i--;
 			}
 		}
+		//System.out.println("divtime: " + (System.nanoTime() - time));
 		range = new byte[data.size()];
 		for(int i = 0; i < data.size(); i++) {
 			range[i] = data.get(i);
 		}
-		for(int i = 0; i < range.length; i++) {
-			setValue(head + i, range[i], parent);
+		int k;
+		for(k = 0; k < range.length; k++) {
+			if(!setValue(head + k, range[k], parent)) break;
 		}
+		int length = k;
 		//System.out.println("rangelength: " + range.length);
 		boolean isSame = false;
 		Code d = null;
@@ -181,14 +186,14 @@ public class SoupManager {
 		if(loc < 0) {
 			codes.add(-(loc + 1),d);
 		}
-		Cell c = new Cell(d, head, range.length, this);
+		Cell c = new Cell(d, head, length, this);
 		//System.out.println(cells);
 		i.previous();
 		i.add(c);
 		i.next();
 		deathList.addFirst(c);
 		//System.out.println(cells);
-		for(int i = 0; i < range.length; i++) {
+		for(int i = 0; i < length; i++) {
 			setLockVal(head + i, true);
 		}
 		c.activate();
@@ -437,6 +442,7 @@ public class SoupManager {
 	
 	/**Cycles through the cell queue once*/
 	public void act() {
+		long time = System.nanoTime();
 		i = cells.listIterator();
 		while(i.hasNext()) {
 			Cell c = i.next();
@@ -465,15 +471,24 @@ public class SoupManager {
 				//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 160, 240)));
 				//int[][] comp = SequenceAlignment.findEditDistance(Arrays.toString(Arrays.copyOfRange(soup, 0, 80)), Arrays.toString(Arrays.copyOfRange(soup, 160, 240)));
 				//System.out.println(SequenceAlignment.findOptimalString(comp, Arrays.toString(Arrays.copyOfRange(soup, 0, 80)), Arrays.toString(Arrays.copyOfRange(soup, 160, 240))));
+				System.out.println(cells);
+				System.out.println(codes);
 				System.out.println("Some codes:");
 				for(byte[] b : get10Codes()) {
 					if(b != null) System.out.println(Arrays.toString(b));
 				}
-				System.exit(1);
+				try {
+					this.wait();
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				//System.exit(1);
 			}
 			//System.out.println("Cell done!");
 			this.cycles++;
 		}
+		System.out.println("Cycle Time: " + (System.nanoTime() - time));
 	}
 	
 	/**Returns the top 10 most populous genes in the soup*/
