@@ -166,11 +166,12 @@ public class Code implements Comparable<Code> {
 	@Override
 	/**Compares two codes, first by length, and then by name*/
 	public int compareTo(Code c) {
-		if(this.instr.length != c.instr.length) {
+		/*if(this.instr.length != c.instr.length) {
 			return this.instr.length - c.instr.length;
 		} else {
 			return this.name.compareTo(c.name);
-		}
+		}*/
+		return this.getFullName().compareTo(c.getFullName());
 	}
 	
 	@Override

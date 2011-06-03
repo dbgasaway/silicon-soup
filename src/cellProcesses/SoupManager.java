@@ -436,7 +436,7 @@ public class SoupManager {
 	
 	private static final int RAND_FEED = 0;
 	private static final int CONST_FEED = 1;
-	private static final int BASE_FEED = 30;
+	private static final int BASE_FEED = 100;
 	
 	private static int feedType = CONST_FEED;
 	
@@ -567,5 +567,57 @@ public class SoupManager {
 			if(lockedMem[i]) count++;
 		}
 		return count;
+	}
+	
+	/** Finds the code with the given string id, works like binarySearch
+	 * @param start - inclusive
+	 * @param end - exclusive*/
+	private int findCode(String code) {
+		//TODO: check to see if working
+		/*if(start > end) return null;
+		int mid = (start + end) / 2;
+		Code midval = codes.get(mid);
+		int result = midval.getFullName().compareTo(code);
+		if(result == 0) {
+			return midval;
+		} else if(result > 0) {
+			return findCode(code, start, mid);
+		} else if(start != end) {
+			return findCode(code, mid + 1, end);
+		} else {
+			return null;
+		}*/
+		if(codes.size() == 0) return -1;
+		int start = 0;
+		int end = codes.size();
+		int mid = (start + end) / 2;
+		int t;
+		///System.out.println(codes);
+		while(start < end) {
+			mid = (start + end) / 2;
+			//System.out.println(mid + ": " + codes.get(mid));
+			t = code.compareTo(codes.get(mid).getFullName());
+			//System.out.println("t: " + t);
+			if(t == 0) {
+				return mid;
+			} else if(t < 0) {
+				end = mid;
+			} else {
+				start = mid + 1;
+			}
+		}
+		return -mid - 1;
+	}
+	
+	public Code getCode(String code) {
+		code = code.trim();
+		//System.out.println(code);
+		int ix = findCode(code);
+		//System.out.println("ix: " + ix);
+		if(ix >= 0) {
+			return codes.get(ix);
+		} else {
+			return null;
+		}
 	}
 }
