@@ -67,7 +67,7 @@ public class Cell {
         
         /**Allocates memory and returns the address of its start, or -1 if not successful*/
         public int allocate(int size) {
-        	int ix = soup.allocate(this, size + alloc);
+        	int ix = soup.allocate(this, alloc);
         	malLoc = ix;
         	if(ix == -1) {
         		return -1;

@@ -137,7 +137,7 @@ public class SoupManager {
 	 * and mutates the new cell*/
 	private void addExistingCell(Cell parent, int head, int size) {
 		//TODO: descent with modification
-		ArrayList<Byte> data = new ArrayList<Byte>();
+		ArrayList<Byte> data = new ArrayList<Byte>(size);
 		byte[] range = getRange(head, head + size - 1);
 		for(byte by : range) {
 			data.add(by);
@@ -161,6 +161,7 @@ public class SoupManager {
 		for(int i = 0; i < data.size(); i++) {
 			range[i] = data.get(i);
 		}
+		//TODO:make so ranges are calculated properly
 		int k;
 		for(k = 0; k < range.length; k++) {
 			if(!setValue(head + k, range[k], parent)) break;
@@ -289,8 +290,8 @@ public class SoupManager {
 	 *  greater than ix and the difference must be less that the soup size. If 
 	 *  iy is not greater than ix then it returns an empty array*/
 	public byte[] getRange(int ix, int iy) {
-		/*if(ix >= iy) {
-			//System.out.println("ERROR : false precondition, ix: " + ix + ", iy: "+ iy);
+		/*if(ix > iy) {
+			System.out.println("ERROR : false precondition, ix: " + ix + ", iy: "+ iy);
 		}*/
 		byte[] ret = new byte[iy - ix + 1];
 		int i;
@@ -320,7 +321,7 @@ public class SoupManager {
 	 * @param size - size of space to allocate
 	 * @return address of the start of the allocated space, or -1 on failure*/
 	public int allocate(Cell c, int size) {
-		if(size > MAX_MEM_ALLOC_RATIO * c.getSize()) return -1;
+		if(size > MAX_MEM_ALLOC_RATIO * c.getSize() || size > 9999) return -1;
 		int ix = findAndCreateSpace(size);
 		if(c.getMalLoc() != -1) {
 			releaseMem(c.getMalLoc(), c.getAlloc());
