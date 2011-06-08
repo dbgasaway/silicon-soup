@@ -129,9 +129,9 @@ public class SoupManager {
 	}
 	
 	/*mutation rates are per gene, 1/x*/
-	private double flipMutationRate = 300;
-	private double addMutationRate = 300;
-	private double subMutationRate = 300;
+	private double flipMutationRate = 1000;
+	private double addMutationRate = 1000;
+	private double subMutationRate = 1000;
 	
 	/**Adds a cell to the cell list that already has its code in the soup,
 	 * and mutates the new cell*/
@@ -489,7 +489,7 @@ public class SoupManager {
 			//System.out.println("Cell done!");
 			this.cycles++;
 		}
-		System.out.println("Cycle Time: " + (System.nanoTime() - time));
+		System.out.println("Cycle Time: " + (System.nanoTime() - time) + ", Mean time per cell: " + (System.nanoTime() - time) / cells.size());
 	}
 	
 	/**Returns the top 10 most populous genes in the soup*/
@@ -570,11 +570,19 @@ public class SoupManager {
 		return count;
 	}
 	
+	public int getCellReservedSpace() {
+		int count = 0;
+		for(Cell c : cells) {
+			count += c.getSize();
+			if(c.getAlloc() > 0 && c.getMalLoc() >=0) count+= c.getAlloc();
+		}
+		return count;
+	}
+	
 	/** Finds the code with the given string id, works like binarySearch
 	 * @param start - inclusive
 	 * @param end - exclusive*/
 	private int findCode(String code) {
-		//TODO: check to see if working
 		/*if(start > end) return null;
 		int mid = (start + end) / 2;
 		Code midval = codes.get(mid);

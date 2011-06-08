@@ -67,12 +67,12 @@ public class Cell {
         
         /**Allocates memory and returns the address of its start, or -1 if not successful*/
         public int allocate(int size) {
-        	int ix = soup.allocate(this, alloc);
+        	//TODO: fix cells allocating memory and clearing it on failure, but not changing cell values
+        	int ix = soup.allocate(this, size);
         	malLoc = ix;
         	if(ix == -1) {
         		return -1;
         	} else {
-        		//TODO: check to see if specification conforms, it just resets now
         		alloc = size;
         		return ix;
         	}
@@ -114,7 +114,7 @@ class CPU {
                 this.cycles += cycles;
                 while(this.cycles > 0) {
                 	byte b = soup.getValue(ip);
-                	this.execute(b);
+                	if(cell.isInAlloc(ip)) this.execute(b);
                 	this.cycles--;
                 	//System.out.println("Cycle: " + this.cycles + ", IP: " + ip + ", b: " + b);
                 }
@@ -238,6 +238,7 @@ class CPU {
         		//System.out.println("malLoc: " + cell.getMalLoc() + ", alloc: " + cell.getAlloc());
         		if(cell.getAlloc() > soup.getMinCellSize()) {
         			soup.splitCell(cell);
+        			soup.shiftDownCellDeath(cell);
         		}
         		ip++;
         		break;

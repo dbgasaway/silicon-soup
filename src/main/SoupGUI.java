@@ -46,7 +46,7 @@ public class SoupGUI extends JFrame implements Runnable {
 		t.setLineWrap(false);
 		
 		totalCycles = new JTextArea();
-		totalCycles.setColumns(12);
+		totalCycles.setColumns(14);
 		totalCycles.setRows(5);
 		totalCycles.setEditable(false);
 		totalCycles.setLineWrap(false);
@@ -59,7 +59,9 @@ public class SoupGUI extends JFrame implements Runnable {
 				System.out.println("Running= " + isRunning);
 				if(!isRunning) {
 					for(byte[] b : s.get10Codes()) {
-						System.out.println(Arrays.toString(Code.getCodeNameList(b)));
+						if(b != null) {
+							System.out.println(Arrays.toString(Code.getCodeNameList(b)));
+						}
 					}
 				}
 			}
@@ -86,7 +88,7 @@ public class SoupGUI extends JFrame implements Runnable {
 			@Override
 			public void keyTyped(KeyEvent arg0) {
 				char c = arg0.getKeyChar();
-				if(c == '\n' || c == 'r') {
+				if(c == '\n' || c == '\r') {
 					Code cd = s.getCode(input.getText());
 					System.out.println(cd);
 					if(cd != null) System.out.println(Arrays.toString(Code.getCodeNameList(cd.getCode())));
@@ -139,7 +141,9 @@ public class SoupGUI extends JFrame implements Runnable {
 				totalCycles.setText("Cycles: " + s.getCycles()
 						+ "\nTotal Cells: " + s.getTotalCells()
 						+ "\nTotal Codes: " + s.getTotalCodes()
-						+ "\nAllocated Space: " + s.getAllocatedSpace());
+						+ "\nAllocated Space: " + s.getAllocatedSpace()
+						+ "\nTotal Cell Memory: " + s.getCellReservedSpace()
+						+ "\nMean Cell Memory: " + s.getCellReservedSpace() / s.getTotalCells());
 			} else {
 				Object o = new Object();
 				synchronized(o) {
