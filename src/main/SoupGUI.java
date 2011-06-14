@@ -76,14 +76,10 @@ public class SoupGUI extends JFrame implements Runnable {
 		input.setBackground(Color.CYAN);
 		input.addKeyListener(new KeyListener() {
 			@Override
-			public void keyPressed(KeyEvent arg0) {
-				// TODO Auto-generated method stub
-				
+			public void keyPressed(KeyEvent arg0) {	
 			}
 			@Override
 			public void keyReleased(KeyEvent arg0) {
-				// TODO Auto-generated method stub
-				
 			}
 			@Override
 			public void keyTyped(KeyEvent arg0) {

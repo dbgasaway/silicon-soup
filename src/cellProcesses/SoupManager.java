@@ -321,7 +321,12 @@ public class SoupManager {
 	 * @param size - size of space to allocate
 	 * @return address of the start of the allocated space, or -1 on failure*/
 	public int allocate(Cell c, int size) {
-		if(size > MAX_MEM_ALLOC_RATIO * c.getSize() || size > 9999) return -1;
+		if(size > MAX_MEM_ALLOC_RATIO * c.getSize() || size > 9999) {
+			if(c.getMalLoc() != -1) {
+				releaseMem(c.getMalLoc(), c.getAlloc());
+			}
+			return -1;
+		}
 		int ix = findAndCreateSpace(size);
 		if(c.getMalLoc() != -1) {
 			releaseMem(c.getMalLoc(), c.getAlloc());
@@ -385,11 +390,14 @@ public class SoupManager {
 			c = i.previous();
 			i.remove();
 		}*/
-		//System.out.println("Killed top at: " + c.getHead() + ", with size: " + c.getSize());
+		//System.out.println("Killed top at: " + c2.getHead() + ", with size: " + c2.getSize());
 		releaseMem(c2.getHead(), c2.getSize());
-		if(c2.getAlloc() != 0) releaseMem(c2.getMalLoc(), c2.getAlloc());
+		if(c2.getAlloc() > 0 && c2.getMalLoc() >= 0) releaseMem(c2.getMalLoc(), c2.getAlloc());
 		i = cells.listIterator(cells.lastIndexOf(c));
 		i.next();
+		/*if(this.getAllocatedSpace() != this.getCellReservedSpace()) {
+    		throw new IllegalStateException("Cell allocation doesn't match total allocation");
+    	}*/
 		//System.out.println(cells);
 		//System.out.println(deathList);
 	}
@@ -481,7 +489,6 @@ public class SoupManager {
 				try {
 					this.wait();
 				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 				//System.exit(1);
@@ -574,7 +581,7 @@ public class SoupManager {
 		int count = 0;
 		for(Cell c : cells) {
 			count += c.getSize();
-			if(c.getAlloc() > 0 && c.getMalLoc() >=0) count+= c.getAlloc();
+			if(c.getAlloc() > 0 && c.getMalLoc() >=0) count += c.getAlloc();
 		}
 		return count;
 	}

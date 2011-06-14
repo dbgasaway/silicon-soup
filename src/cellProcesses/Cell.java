@@ -68,12 +68,24 @@ public class Cell {
         /**Allocates memory and returns the address of its start, or -1 if not successful*/
         public int allocate(int size) {
         	//TODO: fix cells allocating memory and clearing it on failure, but not changing cell values
+        	/*System.out.println("H: head: " + this.getHead() + ", Alloc: " + this.getAlloc() + ", loc: " + this.getMalLoc());
+        	if(soup.getAllocatedSpace() != soup.getCellReservedSpace()) {
+        		throw new IllegalStateException("Cell allocation doesn't match total allocation");
+        	}*/
         	int ix = soup.allocate(this, size);
         	malLoc = ix;
         	if(ix == -1) {
+        		/*System.out.println("F1: Alloc: " + this.getAlloc() + ", loc: " + this.getMalLoc());
+        		if(soup.getAllocatedSpace() != soup.getCellReservedSpace()) {
+            		throw new IllegalStateException("Cell allocation doesn't match total allocation");
+            	}*/
         		return -1;
         	} else {
         		alloc = size;
+        		/*System.out.println("F2: Alloc: " + this.getAlloc() + ", loc: " + this.getMalLoc());
+        		if(soup.getAllocatedSpace() != soup.getCellReservedSpace()) {
+            		throw new IllegalStateException("Cell allocation doesn't match total allocation");
+            	}*/
         		return ix;
         	}
         }
