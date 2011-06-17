@@ -274,8 +274,8 @@ class CPU {
         			//if(c != 80 && c != 0) System.out.println("ALLOC: Big c of: " + c + ", at: " + ip + ", with a head at: " + cell.getHead());
         			//if(c != 80) throw new IllegalArgumentException("Incorrect Size at: " + ip);
         			a = cell.allocate(c);
+        			if(a > 0) soup.shiftDownCellDeath(cell);
         		}
-        		if(a > 0) soup.shiftDownCellDeath(cell);
         		ip++;
         		break;
         	case Code.PUSHA:

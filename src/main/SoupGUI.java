@@ -137,6 +137,7 @@ public class SoupGUI extends JFrame implements Runnable {
 				totalCycles.setText("Cycles: " + s.getCycles()
 						+ "\nTotal Cells: " + s.getTotalCells()
 						+ "\nTotal Codes: " + s.getTotalCodes()
+						+ "\nActive Codes: " + s.getActiveCodes()
 						+ "\nAllocated Space: " + s.getAllocatedSpace()
 						+ "\nTotal Cell Memory: " + s.getCellReservedSpace()
 						+ "\nMean Cell Memory: " + s.getCellReservedSpace() / s.getTotalCells());

@@ -636,4 +636,26 @@ public class SoupManager {
 			return null;
 		}
 	}
+	
+	public int getActiveCodes() {
+		int count = 0;
+		ArrayList<Code> list = new ArrayList<Code>();
+		Code c = null;
+		//try{
+		for(ListIterator<Cell> i = cells.listIterator(); i.hasNext(); c = i.next().getCode()) {
+			if(c != null) {
+				int ix = Collections.binarySearch(list, c);
+				if(ix < 0) {
+					list.add(-(ix + 1), c);
+					count++;
+				}
+			}
+		}
+		/*} catch(NullPointerException e) {
+			System.out.println(i.hasNext());
+			System.out.println(i.nextIndex());
+			e.printStackTrace();
+		}*/
+		return count;
+	}
 }
