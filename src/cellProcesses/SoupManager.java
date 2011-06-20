@@ -445,6 +445,7 @@ public class SoupManager {
 	
 	private static final int RAND_FEED = 0;
 	private static final int CONST_FEED = 1;
+	private static final int ADJ_SIZE_FEED = 2;
 	private static final int BASE_FEED = 100;
 	
 	private static int feedType = CONST_FEED;
@@ -463,6 +464,9 @@ public class SoupManager {
 				break;
 			case CONST_FEED:
 				cycles = BASE_FEED;
+				break;
+			case ADJ_SIZE_FEED:
+				cycles = (int)(Math.sqrt(c.getSize()) * BASE_FEED);
 				break;
 			default:
 				throw new IllegalArgumentException("Invalid feed type: " + feedType);
@@ -549,18 +553,22 @@ public class SoupManager {
 		return ret;
 	}
 	
+	/**returns the total number of cycles*/
 	public long getCycles() {
 		return cycles;
 	}
 	
+	/**returns the total number of cells*/
 	public int getTotalCells() {
 		return cells.size();
 	}
 	
+	/**returns the total number of codes*/
 	public int getTotalCodes() {
 		return codes.size();
 	}
 	
+	/**returns the first 10 codes*/
 	public byte[][] get10Codes() {
 		byte[][] ret = new byte[10][];
 		for(int i = 0; i < ret.length && i < codes.size(); i++) {
@@ -569,6 +577,7 @@ public class SoupManager {
 		return ret;
 	}
 	
+	/**returns how much space is locked in memory*/
 	public int getAllocatedSpace() {
 		int count = 0;
 		for(int i = 0; i < lockedMem.length; i++) {
@@ -577,6 +586,7 @@ public class SoupManager {
 		return count;
 	}
 	
+	/**returns how much of the soup the cell owns*/
 	public int getCellReservedSpace() {
 		int count = 0;
 		for(Cell c : cells) {
@@ -625,6 +635,7 @@ public class SoupManager {
 		return -mid - 1;
 	}
 	
+	/**returns the code with the given id*/
 	public Code getCode(String code) {
 		code = code.trim();
 		//System.out.println(code);
@@ -637,6 +648,7 @@ public class SoupManager {
 		}
 	}
 	
+	/**Returns the total number of currently used codes*/
 	public int getActiveCodes() {
 		int count = 0;
 		ArrayList<Code> list = new ArrayList<Code>();

@@ -94,6 +94,16 @@ public class SequenceAlignment {
 		int i = 0;
 		int k = 0;
 		while(true) {
+			while(i == x.length() && k != y.length()) {
+				rX = rX.concat("-");
+				rY = rY.concat("" + y.charAt(k));
+				k++;
+			}
+			while(k == y.length() && i != x.length()) {
+				rX = rX.concat("" + x.charAt(i));
+				rY = rY.concat("-");
+				i++;
+			}
 			if(i == x.length() && k == y.length()) {
 				break;
 			}
