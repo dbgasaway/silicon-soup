@@ -15,6 +15,8 @@ import cellProcesses.Code;
 import java.util.Arrays;
 import java.util.Stack;
 
+import comparators.*;
+
 public class SoupGUI extends JFrame implements Runnable {
 	/**
 	 * default id
@@ -85,9 +87,34 @@ public class SoupGUI extends JFrame implements Runnable {
 			public void keyTyped(KeyEvent arg0) {
 				char c = arg0.getKeyChar();
 				if(c == '\n' || c == '\r') {
-					Code cd = s.getCode(input.getText());
-					System.out.println(cd);
-					if(cd != null) System.out.println(Arrays.toString(Code.getCodeNameList(cd.getCode())));
+					String in = input.getText();
+					//System.out.println(in);
+					//System.out.println(in.substring(0, 4));
+					if(in.substring(0, 4).equals("comp")) {
+						//System.out.println("comp cycle");
+						in = in.substring(5);
+						String[] comps = in.split("[ ]+");
+						if(comps.length != 2) {
+							System.out.println("Invalid comp");
+							input.setText("");
+							return;
+						}
+						//System.out.println(Arrays.toString(comps));
+						Code c1 = s.getCode(comps[0]);
+						Code c2 = s.getCode(comps[1]);
+						if(c1 == null || c2 == null) {
+							System.out.println("c1 or c2: null");
+						} else {
+							String s1 = Arrays.toString(Code.getCodeNameList(c1.getCode()));
+							String s2 = Arrays.toString(Code.getCodeNameList(c2.getCode()));
+							int[][] result = SequenceAlignment.findEditDistance(s1, s2);
+							System.out.println(SequenceAlignment.findOptimalString(result, s1, s2));
+						}
+					} else {
+						Code cd = s.getCode(in);
+						System.out.println(cd);
+						if(cd != null) System.out.println(Arrays.toString(Code.getCodeNameList(cd.getCode())));
+					}
 					input.setText("");
 				}
 			}			
@@ -154,10 +181,12 @@ public class SoupGUI extends JFrame implements Runnable {
 		}
 	}
 	
+	/**adds a cell to the soup*/
 	public void addCell(Cell c) {
 		cells.push(c);
 	}
 	
+	/**adds a code as a cell to the soup*/
 	public void addCell(byte[] code) {
 		codes.push(code);
 	}
