@@ -6,6 +6,7 @@ import java.util.Arrays;
 public class Code implements Comparable<Code> {
 	private String name;
 	private byte[] instr;
+	private String parent;
 	
 	/**NOP and template value*/
     public static final byte NOP0 = 0;
@@ -14,7 +15,7 @@ public class Code implements Comparable<Code> {
     public static final byte ZERO = 2;
     public static final byte SUBBAC = 3;
     public static final byte SUBCAA = 23;
-    public static final byte JUMPF = 4;
+    //public static final byte JUMPF = 4;//unused
     public static final byte JUMP = 5;
     public static final byte JUMPB = 6;
     public static final byte SEARCHF = 7;
@@ -41,7 +42,7 @@ public class Code implements Comparable<Code> {
     public static final byte LSHIFTC = 29;
     public static final byte IFCZ = 30;
     public static final byte CALL = 31;
-    public static final byte RET = 32;
+    public static final byte RET = 4;
     
     public static final int BITS = 5;
     
@@ -49,14 +50,15 @@ public class Code implements Comparable<Code> {
     
     /**contains all valid instructions*/
     public static final byte[] VALID_INSTRUCTIONS = {NOP0, NOP1, ZERO, SUBBAC, 
-    	JUMPF, JUMP, JUMPB, SEARCHF, SEARCHB, SEARCH, DIVIDE, MOVEIXBA, LOADAB, 
+    	/*JUMPF,*/ JUMP, JUMPB, SEARCHF, SEARCHB, SEARCH, DIVIDE, MOVEIXBA, LOADAB, 
     	ALLOC, PUSHA, PUSHB, PUSHC, POPA, POPB, POPC, PUSHD, POPD, LOADCD, SUBCAA,
     	INCA, INCB, INCC, DECC, NOT0C, LSHIFTC, IFCZ, CALL, RET
     };
 	
-	public Code(byte[] instr, String name) {
+	public Code(byte[] instr, String name, String parent) {
 		this.instr = instr;
 		this.name = name;
+		this.parent = parent;
 	}
 	
 	public byte[] getCode() {
@@ -71,6 +73,10 @@ public class Code implements Comparable<Code> {
 		return instr.length + name;
 	}
 	
+	public String getParent() {
+		return parent;
+	}
+	
 	public static String getCodeName(byte b) {
 		switch(b) {
 		case NOP0:
@@ -81,8 +87,8 @@ public class Code implements Comparable<Code> {
 			return "ZERO";
 		case SUBBAC:
 			return "SUBBAC";
-		case JUMPF:
-			return "JUMPF";
+		/*case JUMPF:
+			return "JUMPF";*/
 		case JUMP:
 			return "JUMP";
 		case JUMPB:

@@ -21,9 +21,9 @@ public class SequenceAlignment {
 			s1 = s2;
 			s2 = temp;
 		}*/
-		String optimal = findOptimalString(scores, s1, s2);
+		String[] optimals = findOptimalString(scores, s1, s2);
 		System.out.println(scores[0][0]);
-		System.out.println(optimal);
+		System.out.println(optimals[0] + "\n" + optimals[1]);
 	}
 
 	private static int min(int a, int b, int c) {
@@ -77,9 +77,6 @@ public class SequenceAlignment {
 			}
 		}
 		
-		/*for(int[] row : opts) {
-			System.out.println(Arrays.toString(row));
-		}*/
 		return(opts);
 	}
 	
@@ -87,8 +84,8 @@ public class SequenceAlignment {
 	 * It is required to use the strings in the same order as used to generate the edit distance matrix
 	 * @param opts - the edit distance matrix
 	 * @return the optimal configuration, with '-' used to represent a blank,
-	 * in the form "str1\nstr2"*/
-	public static String findOptimalString(int[][] opts, String x, String y) {
+	 * in the form "[str1,str2]"*/
+	public static String[] findOptimalString(int[][] opts, String x, String y) {
 		String rX = "";
 		String rY = "";
 		int i = 0;
@@ -127,13 +124,16 @@ public class SequenceAlignment {
 				}
 			}
 		}
-		return(rX + "\n" + rY);
+		String[] ret = {rX, rY};
+		return(ret);
 	}
 	
 	public static int findEditDistanceNumber(byte[] x, byte[] y) {
 		return(findEditDistance(x, y)[0][0]);
 	}
-
+	
+	/**finds the edit distance between two byte arrays
+	 * @return the edit distance matrix, which has the distance at 0, 0; it also holds the optimal configuration*/
 	public static int[][] findEditDistance(byte[] x, byte[] y) {
 		int xL = x.length;
 		int yL = y.length;
@@ -160,41 +160,73 @@ public class SequenceAlignment {
 			}
 		}
 		
-		/*for(int[] row : opts) {
-			System.out.println(Arrays.toString(row));
-		}*/
 		return(opts);
 	}
 	
-	public static String findOptimalComparison(int[][] opts, byte[] x, byte[] y) {
-		String rX = "";
-		String rY = "";
+	/**
+	 * Returns an array of the two byte arrays after finding an optimal mapping. Uses 255 as a sentinel value for a missing byte.
+	 * @param opts - the edit distance array
+	 */
+	public static byte[][] findOptimalComparison(int[][] opts, byte[] x, byte[] y) {
+		byte sentinel = (byte) 255;
+		int length = x.length > y.length ? x.length : y.length;
+		byte[] rX = new byte[length];
+		byte[] rY = new byte[length];
 		int i = 0;
 		int k = 0;
 		while(true) {
-			if(i >= x.length - 1 && k >= y.length - 1 || (i == x.length || k == y.length)) {
+			while(i == x.length && k != y.length) {
+				rX[i] = sentinel;
+				rY[k] = y[k];
+				k++;
+			}
+			while(k == y.length && i != x.length) {
+				rX[i] = x[i];
+				rY[k] = sentinel;
+				i++;
+			}
+			if(i == x.length && k == y.length) {
 				break;
 			}
 			int comp = opts[i][k];
 			int condAdd = 0;
 			if(x[i] != y[k]) condAdd += replacementWeight;
 			if(comp == opts[i + 1][k + 1] + condAdd) {
-				rX = rX.concat("" + x[i]);
-				rY = rY.concat("" + y[k]);
+				rX[i] = x[i];
+				rY[k] = y[k];
 				i++;
 				k++;
 			} else {
 				if(comp == opts[i + 1][k] + missingWeight) {
-					rX = rX.concat("" + x[i]);
-					rY = rY.concat("-");
+					rX[i] = x[i];
+					rY[k] = sentinel;
 					i++;
 				} else {
-					rX = rX.concat("-");
-					rY = rY.concat("" + y[k]);
+					rX[i] = sentinel;
+					rY[k] = y[k];
 					k++;
 				}
 			}
 		}
-		return(rX + "\n" + rY);
+		byte[][] ret = {rX, rY};
+		return(ret);
+	}
+	
+	/**
+	 * Returns a string in which the differences between s1 and s2, which are of identical length, are highlighted by having only those characters that are different appear
+	 */
+	public static String[] highlightDifferences(String s1, String s2) {
+		String ret1 = "";
+		String ret2 = "";
+		for(int i = 0; i < s1.length(); i++) {
+			if(s1.charAt(i) != s2.charAt(i)) {
+				ret1 += s1.charAt(i);
+				ret2 += s2.charAt(i);
+			} else {
+				ret1 += " ";
+				ret2 += " ";
+			}
+		}
+		return(new String[] {ret1, ret2});
 	}
 }

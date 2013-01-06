@@ -12,6 +12,13 @@ public class Cell {
         private int alloc;
         private SoupManager soup;
         
+        /**
+         * Creates a cell
+         * @param c - the cell's code
+         * @param head - the start of the cell in memory, must not exceed the soup's size - 1
+         * @param size - the size of the cell
+         * @param soup - the soup the cell lives in
+         */
         public Cell(Code c, int head, int size, SoupManager soup) {
                 this.c = c;
                 this.head = head;
@@ -49,8 +56,13 @@ public class Cell {
         
         /**returns true if ix is in the cell's memory space*/
         public boolean isInAlloc(int ix) {
-        	return((ix >= head && ix < head + size) ||
-        			(ix >= malLoc && ix < malLoc + alloc));
+        	if(head + size >= soup.getSoupSize() && ix < head) {
+        		ix += soup.getSoupSize();
+        	}
+        	if(ix >= head && ix < head + size) return true;
+        	if(malLoc == -1) return false;
+        	if(ix >= soup.getSoupSize() && malLoc + alloc < soup.getSoupSize()) ix -= soup.getSoupSize();
+        	return ix >= malLoc && ix < malLoc + alloc;
         }
         
         public int getHead() {
@@ -96,8 +108,11 @@ public class Cell {
 }
 
 class CPU {
+		/**Instruction pointer*/
         private int ip;
+        /**Stack pointer*/
         private int sp;
+        //registers
         private int a;
         private int b;
         private int c;
@@ -107,6 +122,15 @@ class CPU {
         private int cycles;
         private Cell cell;
         private SoupManager soup;
+        
+        /*Likelihood of a flaw, 1/x*/
+        private double flawRate = 100000;
+        private boolean hasFlaws = true; //TODO: add flaw definitions
+        
+        /**number of times the daughter cell has instructions loaded into it*/
+        private int movesToDaughter = 0;
+        /**ratio of daughter cell that should be filled, ideally*/
+        private double minInstructionsMoved = .5;
 
         public CPU(int ip, SoupManager soup, Cell c) {
                 this.ip = ip;
@@ -126,7 +150,7 @@ class CPU {
                 this.cycles += cycles;
                 while(this.cycles > 0) {
                 	byte b = soup.getValue(ip);
-                	if(cell.isInAlloc(ip)) this.execute(b);
+                	/*if(cell.isInAlloc(ip)) */this.execute(b);
                 	this.cycles--;
                 	//System.out.println("Cycle: " + this.cycles + ", IP: " + ip + ", b: " + b);
                 }
@@ -189,75 +213,62 @@ class CPU {
         		//System.out.println(Arrays.toString(template));
         		ix = search(template, OUT);
         		//System.out.println("JUMP IX: " + ix);
-        		if(ix != ip) {
-        			ip = ix;
-        		} else {
-        			ip += template.length;
-        		}
+        		ip = ix;
         		break;
-        	case Code.JUMPF:
+        	/*case Code.JUMPF:
         		template = this.getTemplate();
         		ix = search(template, FORWARD);
-        		if(ix != ip) {
-        			ip = ix;
-        		} else {
-        			ip += template.length;
-        		}
-        		break;
+        		ip = ix;
+        		break;*/
         	case Code.JUMPB:
         		template = this.getTemplate();
         		ix = search(template, BACK);
-        		if(ix != ip) {
-        			ip = ix;
-        		} else {
-        			ip += template.length;
-        		}
+        		ip = ix;
         		break;
         	case Code.SEARCH:
         		template = this.getTemplate();
         		ix = search(template, OUT);
-        		if(ix != ip) {
+        		if(ix != ip + template.length + 1) {
         			ip += template.length;
         			c = template.length;
         			a = ix;
-        		} else {
-        			ip++;
         		}
+        		ip++;
         		break;
         	case Code.SEARCHB:
         		template = this.getTemplate();
         		ix = search(template, BACK);
-        		if(ix != ip) {
+        		if(ix != ip + template.length + 1) {
         			ip += template.length;
         			c = template.length;
             		a = ix;
-        		} else {
-        			ip++;
         		}
+        		ip++;
         		break;
         	case Code.SEARCHF:
         		template = this.getTemplate();
         		ix = search(template, FORWARD);
-        		if(ix != ip) {
+        		if(ix != ip + template.length + 1) {
         			ip += template.length;
         			c = template.length;
             		a = ix;
-        		} else {
-        			ip++;
         		}
+        		ip++;
         		break;
         	case Code.DIVIDE:
         		//System.out.println("malLoc: " + cell.getMalLoc() + ", alloc: " + cell.getAlloc());
-        		if(cell.getAlloc() > soup.getMinCellSize()) {
+        		if(cell.getAlloc() > soup.getMinCellSize() && cell.getAlloc() * minInstructionsMoved < movesToDaughter) {
         			soup.splitCell(cell);
         			soup.shiftDownCellDeath(cell);
+        			movesToDaughter = 0;
         		}
         		ip++;
         		break;
         	case Code.MOVEIXBA:
         		//System.out.println("Moving: a: " + a + ", b: " + b + ", head: " + cell.getHead());
-        		boolean worked = soup.setValue(a, soup.getValue(b), cell);
+        		boolean worked = soup.setValue(a, soup.getValue(b), cell, true);
         		//if(!worked) System.out.println("MOV: memwrite failure: IP: " + ip + ", at: " + a  + ", with a head at: " + cell.getHead());
+        		if(worked) movesToDaughter++;
         		ip++;
         		break;
         	case Code.LOADAB:
@@ -274,7 +285,7 @@ class CPU {
         			//if(c != 80 && c != 0) System.out.println("ALLOC: Big c of: " + c + ", at: " + ip + ", with a head at: " + cell.getHead());
         			//if(c != 80) throw new IllegalArgumentException("Incorrect Size at: " + ip);
         			a = cell.allocate(c);
-        			if(a > 0) soup.shiftDownCellDeath(cell);
+        			//if(a > 0) soup.shiftDownCellDeath(cell);
         		}
         		ip++;
         		break;
@@ -353,10 +364,11 @@ class CPU {
         		break;
         	case Code.CALL:
         		template = this.getTemplate();
+        		//System.out.println(Arrays.toString(template));
         		ix = search(template, OUT);
         		//System.out.println("CALL: ix: " + ix);
         		//System.out.println("TemplateLength: " + template.length);
-        		push(ip + template.length);
+        		push(ip + template.length + 1);
         		ip = ix;
         		break;
         	case Code.RET:
@@ -393,7 +405,9 @@ class CPU {
 				}
 			}
 			i--;
+			if(i == 0) return new byte[0];
 			byte[] base = soup.getRange(ip + 1, ip + i);
+			if(base.length != i) throw new IllegalStateException("getRange failed to provide a sane result for: " + "ip: " + ip + ", i: " + i);
 			for(int k = 0; k < base.length; k++) {
 				switch(base[k]) {
 				case Code.NOP0:
@@ -403,7 +417,7 @@ class CPU {
 					base[k] = Code.NOP0;
 					break;
 				default:
-					throw new IllegalArgumentException("Invalid template type");
+					throw new IllegalArgumentException("Invalid template type : " + base[k] + ", cell: " + cell.getCode().getFullName() + "\r\n\r\n" + Arrays.toString(Code.getCodeNameList(base)));
 				}
 			}
 			return base;
@@ -413,13 +427,15 @@ class CPU {
 		private static final int FORWARD = 1;
 		private static final int BACK = -1;
 		private static final int MAX_TEMPLATE_SIZE = 10;
+		/**maximum multiple of the creature's body length that will be searched*/
+		private int searchLimit = 5;
 		
 		/**returns the index of the byte after the nearest template
 		 * @param template - the template to search for
 		 * @param i - the search method: -1 is back, 0 is out, 1 is forward
-		 * @return the index of the nearest template, or ip if none is found or the template is too big*/
+		 * @return the index of the nearest template, or the next actual instruction if no matching template is found or the template is too big*/
         private int search(byte[] template, int i) {
-        	if(template.length > MAX_TEMPLATE_SIZE) return ip;
+        	if(template.length > MAX_TEMPLATE_SIZE || template.length == 0) return ip + template.length + 1;
         	if(i == OUT) {
         		return searchOut(template);
         	} else if(i == BACK) {
@@ -437,6 +453,8 @@ class CPU {
         	int a = searchBack(template);
         	int b = searchForward(template);
         	//System.out.println("Fdist: " + a + ", Bdist: " + b);
+        	if(a == ip + template.length + 1) return b;
+        	if(b == ip + template.length + 1) return a;
         	if(soup.getDist(a, ip) < soup.getDist(b - template.length, ip)) {
         		return a;
         	} else {
@@ -446,25 +464,25 @@ class CPU {
 
 		/**Returns the index of the byte after the nearest template after the ip*/
 		private int searchBack(byte[] template) {
-        	if(template.length == 0) return ip;
-			for(int i = 1; i < soup.getSoupSize(); i++) {
+        	if(template.length == 0) return ip + template.length + 1;
+			for(int i = 1; i < cell.getSize() * searchLimit && i < soup.getSoupSize(); i++) {
 				if(Arrays.equals(template, soup.getRange(ip - i - template.length + 1, ip - i))) {
 					//System.out.println("newloc: " + (ip - i + 1));
 					return ip - i + 1;
 				}
 			}
 			//System.out.println();
-			return ip;
+			return ip + template.length + 1;
 		}
 		
 		/**Returns the index of the byte after the nearest template after the ip*/
 		private int searchForward(byte[] template) {
-        	if(template.length == 0) return ip;
-			for(int i = template.length; i < soup.getSoupSize(); i++) {
+        	if(template.length == 0) return ip + template.length + 1;
+			for(int i = template.length; i < cell.getSize() * searchLimit && i < soup.getSoupSize(); i++) {
 				if(Arrays.equals(template, soup.getRange(ip + i, ip + i + template.length - 1))) {
 					return ip + i + template.length;
 				}
 			}
-			return ip;
+			return ip + template.length + 1;
 		}
 }
