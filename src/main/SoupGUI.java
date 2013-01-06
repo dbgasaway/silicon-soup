@@ -1,5 +1,6 @@
 package main;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -7,60 +8,108 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 import javax.swing.*;
+import javax.swing.UIManager.LookAndFeelInfo;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeNode;
 
 import cellProcesses.Cell;
 import cellProcesses.SoupManager;
 import cellProcesses.Code;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Scanner;
 import java.util.Stack;
 
 import comparators.*;
 
 public class SoupGUI extends JFrame implements Runnable {
-	/**
-	 * default id
-	 */
-	private static final long serialVersionUID = 1L;
+
+	private static final long serialVersionUID = 5066959112531736616L;
 	
-	private SoupManager s;
-	private JPanel p;
-	private final JTextArea t;
-	private final JTextArea input;
-	private final JTextArea totalCycles;
-	private final JButton b;
-	private Stack<Cell> cells;
-	private Stack<byte[]> codes;
+	private SoupManager soup;
+	private JPanel mainPanel;
+	private final JMenuBar menuBar;
+	private final JMenu fileMenu;
+	private final JMenuItem fileSaveAsOption;
+	private final JTextArea topCells;
+	private final JTextArea soupInfo;
+	private final JPanel options;
+	private final JButton pauseButton;
+	private final JTextField input;
+	
+	private Deque<Cell> cells;
+	private Deque<byte[]> codes;
 
 	public SoupGUI() {
-		this.setTitle("SiliconSoup");
-		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		super();
+		
+		for(LookAndFeelInfo i : UIManager.getInstalledLookAndFeels()) {
+			if("nimbus".equalsIgnoreCase(i.getName())) {
+				try {
+					UIManager.setLookAndFeel(i.getClassName());
+					break;
+				} catch (ClassNotFoundException e) { //see documentation in setLookAndFeel for info on these exceptions
+					e.printStackTrace();
+				} catch (InstantiationException e) {
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
+				} catch (UnsupportedLookAndFeelException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		setTitle("SiliconSoup");
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		//this.setSize(500, 500);
 		
-		p = new JPanel();
+		menuBar = new JMenuBar();
+		fileMenu = new JMenu("File");
+		fileMenu.setMnemonic(KeyEvent.VK_F);
+		menuBar.add(fileMenu);
 		
-		this.add(p);
+		fileSaveAsOption = new JMenuItem("Save As");
+		fileSaveAsOption.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK + ActionEvent.SHIFT_MASK));
+		fileSaveAsOption.setMnemonic(KeyEvent.VK_A);
+		fileSaveAsOption.setDisplayedMnemonicIndex(5);
+		fileMenu.add(fileSaveAsOption);
+		add(menuBar, BorderLayout.PAGE_START);
 		
-		t = new JTextArea();
-		t.setColumns(50);
-		t.setRows(10);
-		t.setEditable(false);
-		t.setLineWrap(false);
+		mainPanel = new JPanel();
+		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.X_AXIS));
 		
-		totalCycles = new JTextArea();
-		totalCycles.setColumns(14);
-		totalCycles.setRows(5);
-		totalCycles.setEditable(false);
-		totalCycles.setLineWrap(false);
+		add(mainPanel, BorderLayout.WEST);
 		
-		b = new JButton("START/STOP");
-		b.addActionListener(new ActionListener() {
+		topCells = new JTextArea();
+		topCells.setColumns(50);
+		topCells.setRows(10);
+		topCells.setEditable(false);
+		topCells.setLineWrap(false);
+		
+		soupInfo = new JTextArea();
+		soupInfo.setColumns(14);
+		soupInfo.setRows(5);
+		soupInfo.setEditable(false);
+		soupInfo.setLineWrap(false);
+		
+		options = new JPanel();
+		options.setLayout(new BoxLayout(options, BoxLayout.Y_AXIS));
+		
+		pauseButton = new JButton("START/STOP");
+		pauseButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				isRunning = !isRunning;
 				System.out.println("Running= " + isRunning);
 				if(!isRunning) {
-					for(byte[] b : s.get10Codes()) {
+					for(byte[] b : soup.get10Codes()) {
 						if(b != null) {
 							System.out.println(Arrays.toString(Code.getCodeNameList(b)));
 						}
@@ -69,69 +118,145 @@ public class SoupGUI extends JFrame implements Runnable {
 			}
 		});
 		
-		input = new JTextArea();
+		input = new JTextField();
 		input.setColumns(30);
-		input.setRows(1);
-		//input.
-		input.setLineWrap(false);
 		input.setText("hi");
 		input.setBackground(Color.CYAN);
-		input.addKeyListener(new KeyListener() {
+		input.addActionListener(new ActionListener() {
+			
 			@Override
-			public void keyPressed(KeyEvent arg0) {	
-			}
-			@Override
-			public void keyReleased(KeyEvent arg0) {
-			}
-			@Override
-			public void keyTyped(KeyEvent arg0) {
-				char c = arg0.getKeyChar();
-				if(c == '\n' || c == '\r') {
-					String in = input.getText();
-					//System.out.println(in);
-					//System.out.println(in.substring(0, 4));
-					if(in.substring(0, 4).equals("comp")) {
-						//System.out.println("comp cycle");
-						in = in.substring(5);
-						String[] comps = in.split("[ ]+");
-						if(comps.length != 2) {
-							System.out.println("Invalid comp");
-							input.setText("");
-							return;
-						}
-						//System.out.println(Arrays.toString(comps));
-						Code c1 = s.getCode(comps[0]);
-						Code c2 = s.getCode(comps[1]);
-						if(c1 == null || c2 == null) {
-							System.out.println("c1 or c2: null");
+			public void actionPerformed(ActionEvent arg0) {
+				String in = input.getText();
+				Scanner scan = new Scanner(in);
+				if(scan.hasNext()) {
+					String command = scan.next();
+					if(command.equals("comp")) {
+						String[] optimals = getComparisonOptimals(scan);
+						System.out.println(optimals[0] + "\n" + optimals[1]);
+					} else if(command.equals("help")) {
+						System.out.println("valid commands are: \nhelp\ncomp\ndisp");
+					} else if(command.equals("disp")) {
+						if(scan.hasNext()) {
+							String aCell = scan.next();
+							Code aCode = soup.getCode(aCell);
+							if(aCode == null) {
+								System.out.println("Code not found for: " + aCell);
+							} else {
+								System.out.println(aCell + ": " + Arrays.toString(Code.getCodeNameList(aCode.getCode())));
+							}
 						} else {
-							String s1 = Arrays.toString(Code.getCodeNameList(c1.getCode()));
-							String s2 = Arrays.toString(Code.getCodeNameList(c2.getCode()));
-							int[][] result = SequenceAlignment.findEditDistance(s1, s2);
-							System.out.println(SequenceAlignment.findOptimalString(result, s1, s2));
+							System.out.println("disp uses 1 argument only");
+						}
+					} else if(command.equals("diff")) {
+						String[] optimals = getComparisonOptimals(scan);
+						optimals = SequenceAlignment.highlightDifferences(optimals[0], optimals[1]);
+						System.out.println(optimals[0] + "\n" + optimals[1]);
+					} else if(command.equals("ancestry")){
+						if(scan.hasNext()) {
+							String aCell = scan.next();
+							Code aCode = soup.getCode(aCell);
+							if(aCode == null) {
+								System.out.println("Code not found for: " + aCell);
+							} else {
+								System.out.println(aCell + " descends from: " + aCode.getParent());
+							}
+						} else {
+							System.out.println("ancestry currently uses 1 argument only");
+						}
+					} else if(command.equals("tree")) {
+						String[] options = getArgs(scan);
+						if(options.length == 0) {
+							System.out.println("tree needs at least one argument");
+						} else {
+							if(options[0].equals("codes")) {
+								List<Code> codes = soup.getAllCodes(); 
+								DefaultMutableTreeNode origin = new DefaultMutableTreeNode("Codes from 6666god");
+								Code c;
+								for(ListIterator<Code> i = codes.listIterator(); codes.size() > 0;) {
+									c = i.next();
+									if(c.getParent() == "6666god") {
+										origin.add(new DefaultMutableTreeNode(c));
+										i.remove();
+									} else {
+										Enumeration e = origin.breadthFirstEnumeration();
+										while(e.hasMoreElements()) {
+											DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+											if(c.getParent().equals(node.toString())) {
+												node.add(new DefaultMutableTreeNode(c));
+												i.remove();
+											}
+										}
+										//i.remove();//can be used to insure tree clears
+									}
+									if(!i.hasNext()) {
+										i = codes.listIterator();
+									}
+								}
+								JTree tree = new JTree(origin);
+								JScrollPane view = new JScrollPane(tree);
+								JFrame treeFrame = new JFrame("Code tree");
+								treeFrame.add(view);
+								treeFrame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+								treeFrame.pack();
+								treeFrame.setVisible(true);
+							} else {
+								System.out.println("Invalid option: " + options[0]);
+							}
 						}
 					} else {
-						Code cd = s.getCode(in);
-						System.out.println(cd);
-						if(cd != null) System.out.println(Arrays.toString(Code.getCodeNameList(cd.getCode())));
+						System.out.println("invalid command");
 					}
-					input.setText("");
 				}
-			}			
+				input.setText("");
+			}
 		});
 		
-		p.add(t);
-		p.add(totalCycles);
-		p.add(b);
-		p.add(input);
+		topCells.setAlignmentY(TOP_ALIGNMENT);
+		mainPanel.add(topCells);
+		soupInfo.setAlignmentY(TOP_ALIGNMENT);
+		mainPanel.add(soupInfo);
+		pauseButton.setAlignmentX(LEFT_ALIGNMENT);
+		options.add(pauseButton);
+		input.setAlignmentX(LEFT_ALIGNMENT);
+		options.add(input);
+		options.setAlignmentY(TOP_ALIGNMENT);
+		mainPanel.add(options);
 
-		s = new SoupManager();
-		cells = new Stack<Cell>();
-		codes = new Stack<byte[]>();
+		soup = new SoupManager();
+		cells = new ArrayDeque<Cell>();
+		codes = new ArrayDeque<byte[]>();
 		isRunning = false;
 		
-		this.pack();
-		this.setVisible(true);
+		pack();
+		setVisible(true);
+	}
+	
+	private String[] getArgs(Scanner scan) {
+		String options = scan.nextLine().trim();
+		String[] comps = options.split("[ ]+");
+		return comps;
+	}
+	
+	private String[] getComparisonOptimals(Scanner scan) {
+		String options = scan.nextLine().trim();
+		String[] comps = options.split("[ ]+");
+		if(comps.length < 2) {
+			System.out.println("Invalid comp: 2 arguments needed, given: " + options);
+			input.setText("");
+			return null;
+		}
+		Code c1 = soup.getCode(comps[0]);
+		Code c2 = soup.getCode(comps[1]);
+		if(c1 == null || c2 == null) {
+			System.out.println("c1 or c2: null");
+		} else {
+			String s1 = Arrays.toString(Code.getCodeNameList(c1.getCode()));
+			String s2 = Arrays.toString(Code.getCodeNameList(c2.getCode()));
+			int[][] result = SequenceAlignment.findEditDistance(s1, s2);
+			String[] optimals = SequenceAlignment.findOptimalString(result, s1, s2);
+			return optimals;
+		}
+		return null;
 	}
 	
 	private boolean isRunning;
@@ -142,40 +267,37 @@ public class SoupGUI extends JFrame implements Runnable {
 			//System.out.println("Run");
 			if(isRunning) {
 				//System.out.println("Really running");
-				while(!cells.empty()) {
-					s.addCell(cells.pop());
+				while(!cells.isEmpty()) {
+					soup.addCell(cells.pop());
 				}
-				//System.out.println("Cleared new Cells1");
-				while(!codes.empty()) {
-					s.addCell(codes.pop());
+				//System.out.println("Cleared new Cells");
+				while(!codes.isEmpty()) {
+					soup.addCell(codes.pop());
 				}
-				//System.out.println("Cleared new Cells2");
+				//System.out.println("Cleared new Codes");
 				for(int i = 0; i < 1; i++) {
-					s.act();
+					soup.act();
 				}
 				//System.out.println("acted");
 				String tx = "";
-				String[] lines = s.getTopGenes();
+				String[] lines = soup.getTopGenes();
 				for(String str : lines) {
 					tx += str + "\n";
 				}
 				//System.out.println(tx);
-				t.setText(tx);
-				totalCycles.setText("Cycles: " + s.getCycles()
-						+ "\nTotal Cells: " + s.getTotalCells()
-						+ "\nTotal Codes: " + s.getTotalCodes()
-						+ "\nActive Codes: " + s.getActiveCodes()
-						+ "\nAllocated Space: " + s.getAllocatedSpace()
-						+ "\nTotal Cell Memory: " + s.getCellReservedSpace()
-						+ "\nMean Cell Memory: " + s.getCellReservedSpace() / s.getTotalCells());
+				topCells.setText(tx);
+				soupInfo.setText("Cycles: " + soup.getCycles()
+						+ "\nTotal Cells: " + soup.getTotalCells()
+						+ "\nTotal Codes: " + soup.getTotalCodes()
+						+ "\nActive Codes: " + soup.getActiveCodes()
+						+ "\nAllocated Space: " + soup.getAllocatedSpace()
+						+ "\nTotal Cell Memory: " + soup.getCellReservedSpace()
+						+ "\nMean Cell Memory: " + soup.getCellReservedSpace() / soup.getTotalCells());
 			} else {
-				Object o = new Object();
-				synchronized(o) {
-					try {
-						o.wait(10);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 			}
 		}

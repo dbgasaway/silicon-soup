@@ -11,7 +11,7 @@ public class SoupManager {
 	private ArrayList<Code> codes;
 	private String[] names;
 	private long cycles;
-	private ListIterator<Cell> i;
+	private ListIterator<Cell> cellIterator;
 	
 	private static final int SOUP_SIZE = 50000;
 	
@@ -25,30 +25,41 @@ public class SoupManager {
 		names = new String[10000];
 		Arrays.fill(names, "aaa");
 		cycles = 0;
-		i = cells.listIterator();
+		cellIterator = cells.listIterator();
 	}
 	
 	/**returns the value at ix with circular memory*/
 	public byte getValue(int ix) {
-		//System.out.println(-1 % 5); // results in -1?
 		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % SOUP_SIZE;
 		return soup[ix];
 	}
 	
+	//1/x is the chance per instruction for these operations, although flips only happen if no replacement happens
+	double mutationFlipRate = 1000;
+	double mutationReplacementRate = 1000;
+	
 	/**sets the value at ix with val in the soup, if c has permission to do so, or if c is null
 	 * @param ix - the locate to set
 	 * @param val - value to set (ix) to
 	 * @param c - the calling cell, or null
+	 * @param canMutate - if true, the instruction has a chance to be changed into something else by mutation after writing
 	 * @return if the operation was successful*/
-	public boolean setValue(int ix, byte val, Cell c) {
+	public boolean setValue(int ix, byte val, Cell c, boolean canMutate) {
+		if(canMutate) {
+			if((int) (Math.random() * mutationReplacementRate) == 0) {
+				val = Code.getRandomCode();
+			} else if((int) (Math.random() * mutationFlipRate) == 0) {
+				val = Code.bitMutate(val);
+			}
+		}
 		while(ix < 0) ix += SOUP_SIZE;
 		ix = ix % SOUP_SIZE;
 		if(c != null) {
 			while(c.getHead() < 0) c.setHead(c.getHead() + SOUP_SIZE);
 			c.setHead(c.getHead() % SOUP_SIZE);
 		}
-		if(getLockVal(ix) && !c.isInAlloc(ix) && c!= null) {
+		if(c!= null && getLockVal(ix) && !c.isInAlloc(ix)) {
 			return false;
 		} else {
 			soup[ix] = val;
@@ -76,26 +87,34 @@ public class SoupManager {
 		ix = ix % SOUP_SIZE;
 		while(iy < 0) iy += SOUP_SIZE;
 		iy = iy % SOUP_SIZE;
-		return Math.abs(ix - iy);
+		int stdDist = Math.abs(ix - iy);
+		int altDist = getSoupSize() - stdDist;
+		return Math.min(stdDist, altDist);
 	}
 	
+	/**
+	 * returns a cloned copy of the soup's byte array of cell instructions
+	 */
 	public byte[] getSoup() {
 		return soup.clone();
 	}
 	
+	/**
+	 * returns the size of the byte array that holds the soup
+	 */
 	public int getSoupSize() {
 		return SOUP_SIZE;
 	}
 	
-	/**Adds a cell to the soup, and returns if it was successful*/
+	/**Adds a cell to the soup that does not currently exist in the soup, and returns if it was successful*/
 	public boolean addCell(Cell c) {
 		int ix = allocate(c.getSize());
-		if(cells.size() > 0) i.previous();
-		i.add(c);
+		if(cells.size() > 0) cellIterator.previous();
+		cellIterator.add(c);
 		deathList.addFirst(c);
-		if(i.nextIndex() < cells.size()) i.next();
+		if(cellIterator.nextIndex() < cells.size()) cellIterator.next();
 		for(int i = 0; i < c.getSize(); i++) {
-			setValue(ix + i, c.getCode().getCode()[i], null);
+			setValue(ix + i, c.getCode().getCode()[i], null, false);
 			setLockVal(ix + i, true);
 		}
 		int loc = Collections.binarySearch(codes, c.getCode());
@@ -120,51 +139,68 @@ public class SoupManager {
 			}
 		}
 		if(isSame) {
-			d = new Code(range, d.getName());
+			d = new Code(range, d.getName(), d.getParent());
 		} else {
-			d = new Code(range, names[range.length]);
+			d = new Code(range, names[range.length], "6666god");
 			names[range.length] = incName(range.length);
 		}
 		addCell(new Cell(d, 0, range.length, this));
 	}
 	
 	/*mutation rates are per gene, 1/x*/
-	private double flipMutationRate = 1000;
-	private double addMutationRate = 1000;
-	private double subMutationRate = 1000;
+	//private double flipMutationRate = 500;
+	private double addMutationRate = 5000;
+	//private double subMutationRate = 1000;
+	/*mutation rates are per cell, 1/x*/
+	private double splicingCrossoverRate = 64;
+	private double splicingInsertionRate = 64;
+	private double splicingSubtractionRate = 16;
+	//TODO:add smart option for insertion and subtraction (uses template areas for reference, see pg. 7 of doc
+	private double maxSubtractionRatio = .5;
 	
 	/**Adds a cell to the cell list that already has its code in the soup,
 	 * and mutates the new cell*/
 	private void addExistingCell(Cell parent, int head, int size) {
 		//TODO: descent with modification
-		ArrayList<Byte> data = new ArrayList<Byte>(size);
+		List<Byte> data = new ArrayList<Byte>(size + 10);
 		byte[] range = getRange(head, head + size - 1);
 		for(byte by : range) {
 			data.add(by);
 		}
 		//long time = System.nanoTime();
 		for(int i = 0; i < data.size(); i++) {
-			if((int)(Math.random() * flipMutationRate) == 0) {
+			/*if((int)(Math.random() * flipMutationRate) == 0) {
 				data.set(i, Code.getRandomCode());
-			}
-			if((int)(Math.random() * addMutationRate) == 0) {
+			}*/
+			if((int)(Math.random() * addMutationRate) == 0) { //phase out when splicingInsertion is used, see pg. 7
 				data.add(i, Code.getRandomCode());
 				i++;
 			}
-			if((int)(Math.random() * subMutationRate) == 0) {
+			/*if((int)(Math.random() * subMutationRate) == 0) {
 				data.remove(i);
 				i--;
-			}
+			}*/
+		}
+		if((int)(Math.random() * splicingCrossoverRate) == 0) {
+			//TODO:crossover sequences, see pg. 7 of doc, uses a found mate
+		}
+		if((int)(Math.random() * splicingInsertionRate) == 0) {
+			//TODO:insertion sequences, see pg. 7 of doc, uses a found mate
+		}
+		if((int)(Math.random() * splicingSubtractionRate) == 0) {
+			int slice = (int) (Math.random() * data.size() * maxSubtractionRatio) + 1;
+			int start = (int) (Math.random() * (data.size() - slice));
+			data = data.subList(start, start + slice);
 		}
 		//System.out.println("divtime: " + (System.nanoTime() - time));
 		range = new byte[data.size()];
 		for(int i = 0; i < data.size(); i++) {
 			range[i] = data.get(i);
 		}
-		//TODO:make so ranges are calculated properly
+		//TODO:make so ranges are calculated properly, and cells can increase in size after mutation properly
 		int k;
 		for(k = 0; k < range.length; k++) {
-			if(!setValue(head + k, range[k], parent)) break;
+			if(!setValue(head + k, range[k], parent, true)) break;
 		}
 		int length = k;
 		//System.out.println("rangelength: " + range.length);
@@ -178,9 +214,9 @@ public class SoupManager {
 			}
 		}
 		if(isSame) {
-			d = new Code(range, d.getName());
+			d = new Code(range, d.getName(), d.getParent());
 		} else {
-			d = new Code(range, names[range.length]);
+			d = new Code(range, names[range.length], parent.getCode().getFullName());
 			names[range.length] = incName(range.length);
 		}
 		int loc = Collections.binarySearch(codes, d);
@@ -189,9 +225,9 @@ public class SoupManager {
 		}
 		Cell c = new Cell(d, head, length, this);
 		//System.out.println(cells);
-		i.previous();
-		i.add(c);
-		i.next();
+		cellIterator.previous();
+		cellIterator.add(c);
+		cellIterator.next();
 		deathList.addFirst(c);
 		//System.out.println(cells);
 		for(int i = 0; i < length; i++) {
@@ -204,7 +240,7 @@ public class SoupManager {
 	private String incName(int length) {
 		String str = names[length];
 		char[] c = str.toCharArray();
-		if(c[0] <= 'z') {
+		if(c[0] < 'z') {
 			c[0]++;
 		} else {
 			c[0] = 'a';
@@ -257,6 +293,8 @@ public class SoupManager {
 				int space = getSpaceAt(i);
 				if(space >= size) {
 					return i;
+				} else {
+					i += space - 1;
 				}
 			}
 		}
@@ -288,13 +326,18 @@ public class SoupManager {
 
 	/**Returns the range of values in the soup from ix to iy, circularly. iy must be
 	 *  greater than ix and the difference must be less that the soup size. If 
-	 *  iy is not greater than ix then it returns an empty array*/
+	 *  iy is not greater than ix then it returns an empty array. Is inclusive.*/
 	public byte[] getRange(int ix, int iy) {
 		/*if(ix > iy) {
 			System.out.println("ERROR : false precondition, ix: " + ix + ", iy: "+ iy);
 		}*/
 		byte[] ret = new byte[iy - ix + 1];
+		while(ix < 0) ix += SOUP_SIZE;
+		ix = ix % SOUP_SIZE;
+		while(iy < 0) iy += SOUP_SIZE;
+		iy = iy % SOUP_SIZE;
 		int i;
+		if(iy > ix) return Arrays.copyOfRange(soup, ix, iy + 1);
 		for(i = 0; ix <= iy; ix++, i++) {
 			ret[i] = this.getValue(ix);
 		}
@@ -366,7 +409,7 @@ public class SoupManager {
 		//int ix = i.previousIndex();
 		//System.out.println("KILL: Running Total Cells: " + cells.size());
 		/*i = cells.listIterator(cells.size());*/
-		c = i.previous();
+		c = cellIterator.previous();
 		Cell c2 = deathList.getLast();
 		if(c2 != c) {
 			cells.remove(c2);
@@ -393,8 +436,8 @@ public class SoupManager {
 		//System.out.println("Killed top at: " + c2.getHead() + ", with size: " + c2.getSize());
 		releaseMem(c2.getHead(), c2.getSize());
 		if(c2.getAlloc() > 0 && c2.getMalLoc() >= 0) releaseMem(c2.getMalLoc(), c2.getAlloc());
-		i = cells.listIterator(cells.lastIndexOf(c));
-		i.next();
+		cellIterator = cells.listIterator(cells.lastIndexOf(c));
+		cellIterator.next();
 		/*if(this.getAllocatedSpace() != this.getCellReservedSpace()) {
     		throw new IllegalStateException("Cell allocation doesn't match total allocation");
     	}*/
@@ -416,7 +459,7 @@ public class SoupManager {
 	}
 
 	/**Smallest size of a cell*/
-	private int minCellSize = 12;
+	private int minCellSize = 8;
 	
 	public int getMinCellSize() {
 		return minCellSize;
@@ -428,7 +471,7 @@ public class SoupManager {
 		releaseMem(c.getMalLoc(), c.getAlloc());
 		this.addExistingCell(c, c.getMalLoc(), c.getAlloc());
 		c.setAlloc(0);
-		shiftDownCellDeath(c);
+		//shiftDownCellDeath(c);
 	}
 	
 	/**Moves the cell  down the death list 1 spot, if possible*/
@@ -448,14 +491,19 @@ public class SoupManager {
 	private static final int ADJ_SIZE_FEED = 2;
 	private static final int BASE_FEED = 100;
 	
-	private static int feedType = CONST_FEED;
+	private int feedType = CONST_FEED;
+	
+	/**likelihood of a disturbance, 1/x*/
+	private double disturbanceRate = 0;
+	/**proportion of space to free up after a disturbance*/
+	private double disturbanceRatio = .3;
 	
 	/**Cycles through the cell queue once*/
 	public void act() {
 		long time = System.nanoTime();
-		i = cells.listIterator();
-		while(i.hasNext()) {
-			Cell c = i.next();
+		cellIterator = cells.listIterator();
+		while(cellIterator.hasNext()) {
+			Cell c = cellIterator.next();
 			//System.out.println("Cell start!");
 			int cycles = 0;
 			switch(feedType) {
@@ -484,21 +532,22 @@ public class SoupManager {
 				//System.out.println(Arrays.toString(Arrays.copyOfRange(lockedMem, 160, 240)));
 				//int[][] comp = SequenceAlignment.findEditDistance(Arrays.toString(Arrays.copyOfRange(soup, 0, 80)), Arrays.toString(Arrays.copyOfRange(soup, 160, 240)));
 				//System.out.println(SequenceAlignment.findOptimalString(comp, Arrays.toString(Arrays.copyOfRange(soup, 0, 80)), Arrays.toString(Arrays.copyOfRange(soup, 160, 240))));
-				System.out.println(cells);
+				/*System.out.println(cells);
 				System.out.println(codes);
 				System.out.println("Some codes:");
 				for(byte[] b : get10Codes()) {
 					if(b != null) System.out.println(Arrays.toString(b));
-				}
-				try {
-					this.wait();
-				} catch (InterruptedException e1) {
-					e1.printStackTrace();
-				}
+				}*/
+				throw new IllegalStateException("passing up", e);
 				//System.exit(1);
 			}
 			//System.out.println("Cell done!");
 			this.cycles++;
+		}
+		if((disturbanceRate > .5) && (int) (Math.random() * disturbanceRate) == 0) {
+			while(getAllocatedSpace() > (1 - disturbanceRatio) * SOUP_SIZE) {
+				killTop();
+			}
 		}
 		System.out.println("Cycle Time: " + (System.nanoTime() - time) + ", Mean time per cell: " + (System.nanoTime() - time) / cells.size());
 	}
@@ -591,7 +640,7 @@ public class SoupManager {
 		int count = 0;
 		for(Cell c : cells) {
 			count += c.getSize();
-			if(c.getAlloc() > 0 && c.getMalLoc() >=0) count += c.getAlloc();
+			if(c.getAlloc() > 0 && c.getMalLoc() >= 0) count += c.getAlloc();
 		}
 		return count;
 	}
@@ -669,5 +718,13 @@ public class SoupManager {
 			e.printStackTrace();
 		}*/
 		return count;
+	}
+	
+	/**Returns a copy of all the codes held by the SoupManager*/
+	public List<Code> getAllCodes() {
+		ArrayList<Code> ret = new ArrayList<Code>(codes.size());
+		ret.addAll(codes);
+		//Collections.copy(ret, codes);
+		return ret;
 	}
 }
