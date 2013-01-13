@@ -195,4 +195,9 @@ public class Code implements Comparable<Code> {
 			throw new IllegalArgumentException("Invalid Object: " + o);
 		}
 	}
+	
+	@Override
+	public int hashCode() {
+		return Arrays.hashCode(instr);
+	}
 }

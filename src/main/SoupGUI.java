@@ -18,9 +18,11 @@ import cellProcesses.Code;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Scanner;
@@ -169,10 +171,10 @@ public class SoupGUI extends JFrame implements Runnable {
 							System.out.println("tree needs at least one argument");
 						} else {
 							if(options[0].equals("codes")) {
-								List<Code> codes = soup.getAllCodes(); 
+								Collection<Code> codes = soup.getAllCodes(); 
 								DefaultMutableTreeNode origin = new DefaultMutableTreeNode("Codes from 6666god");
 								Code c;
-								for(ListIterator<Code> i = codes.listIterator(); codes.size() > 0;) {
+								for(Iterator<Code> i = codes.iterator(); codes.size() > 0;) {
 									c = i.next();
 									if(c.getParent() == "6666god") {
 										origin.add(new DefaultMutableTreeNode(c));
@@ -189,7 +191,7 @@ public class SoupGUI extends JFrame implements Runnable {
 										//i.remove();//can be used to insure tree clears
 									}
 									if(!i.hasNext()) {
-										i = codes.listIterator();
+										i = codes.iterator();
 									}
 								}
 								JTree tree = new JTree(origin);
