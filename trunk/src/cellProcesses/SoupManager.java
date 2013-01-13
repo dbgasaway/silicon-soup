@@ -1,14 +1,23 @@
 package cellProcesses;
 
-import java.util.*;
-//import comparators.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
 
 public class SoupManager {
 	private byte[] soup;
 	private boolean[] lockedMem;
 	private LinkedList<Cell> cells;
 	private LinkedList<Cell> deathList;
-	private ArrayList<Code> codes;
+	private Map<Code, Code> codes;
+	private Map<String, Code> codeLookup;
 	private String[] names;
 	private long cycles;
 	private ListIterator<Cell> cellIterator;
@@ -21,7 +30,8 @@ public class SoupManager {
 		Arrays.fill(lockedMem, false);
 		cells = new LinkedList<Cell>();
 		deathList = new LinkedList<Cell>();
-		codes = new ArrayList<Code>();
+		codes = new HashMap<Code, Code>();
+		codeLookup = new HashMap<String, Code>();
 		names = new String[10000];
 		Arrays.fill(names, "aaa");
 		cycles = 0;
@@ -117,27 +127,20 @@ public class SoupManager {
 			setValue(ix + i, c.getCode().getCode()[i], null, false);
 			setLockVal(ix + i, true);
 		}
-		int loc = Collections.binarySearch(codes, c.getCode());
-		if(loc < 0) {
-			codes.add(-(loc + 1),c.getCode());
-		}
+
+		addCode(c.getCode());
+
 		c.activate();
 		//System.out.println("activated");
 		return true;
 	}
 	
-	/**adds a cell to the soup given the given code
+	/**adds a cell to the soup given the given code, assuming the cell was made by a person
 	 * @param range - the area of code to make the new cell with*/
 	public void addCell(byte[] range) {
 		boolean isSame = false;
-		Code d = null;
-		for(int i = 0; i < codes.size(); i++) {
-			d = codes.get(i);
-			if(Arrays.equals(range, d.getCode())) {
-				isSame = true;
-				break;
-			}
-		}
+		Code d = new Code(range, "(((", "###");
+		isSame = codes.containsKey(d);
 		if(isSame) {
 			d = new Code(range, d.getName(), d.getParent());
 		} else {
@@ -205,25 +208,17 @@ public class SoupManager {
 		int length = k;
 		//System.out.println("rangelength: " + range.length);
 		boolean isSame = false;
-		Code d = null;
-		for(int i = 0; i < codes.size(); i++) {
-			d = codes.get(i);
-			if(Arrays.equals(range, d.getCode())) {
-				isSame = true;
-				break;
-			}
-		}
+		Code cellCode = null;
+		isSame = codes.containsKey(new Code(range, "N/A", "N/A"));
 		if(isSame) {
-			d = new Code(range, d.getName(), d.getParent());
+			Code actual = codes.get(new Code(range, "N/A", "N/A"));
+			cellCode = new Code(range, actual.getName(), actual.getParent());
 		} else {
-			d = new Code(range, names[range.length], parent.getCode().getFullName());
+			cellCode = new Code(range, names[range.length], parent.getCode().getFullName());
 			names[range.length] = incName(range.length);
 		}
-		int loc = Collections.binarySearch(codes, d);
-		if(loc < 0) {
-			codes.add(-(loc + 1),d);
-		}
-		Cell c = new Cell(d, head, length, this);
+		if(!isSame) addCode(cellCode);
+		Cell c = new Cell(cellCode, head, length, this);
 		//System.out.println(cells);
 		cellIterator.previous();
 		cellIterator.add(c);
@@ -305,7 +300,14 @@ public class SoupManager {
 	private int findAndCreateSpace(int size) {
 		int ix = findSpace(size);
 		while(ix == -1) {
-			killTop();
+			if(cells.size() > 100) {
+				int totalToKill = cells.size() / 20;
+				for(int i = 0; i < totalToKill; i++) {
+					killTop();
+				}
+			} else {
+				killTop();
+			}
 			ix = findSpace(size);
 		}
 		return ix;
@@ -550,6 +552,12 @@ public class SoupManager {
 			}
 		}
 		System.out.println("Cycle Time: " + (System.nanoTime() - time) + ", Mean time per cell: " + (System.nanoTime() - time) / cells.size());
+		/*Collection<Code> names = getAllCodes();
+		Set<String> actNames = new HashSet<String>(names.size());
+		for(Code c : names) {
+			actNames.add(c.getFullName());
+		}
+		System.out.println("Code size: " + names.size() + ", names size: " + actNames.size());*/
 	}
 	
 	/**Returns the top 10 most populous genes in the soup*/
@@ -617,11 +625,14 @@ public class SoupManager {
 		return codes.size();
 	}
 	
-	/**returns the first 10 codes*/
+	/**returns some 10 codes*/
 	public byte[][] get10Codes() {
 		byte[][] ret = new byte[10][];
-		for(int i = 0; i < ret.length && i < codes.size(); i++) {
-			ret[i] = codes.get(i).getCode();
+		int i = 0;
+		for(Code d : codes.values()) {
+			ret[i] = d.getCode();
+			i++;
+			if(i >= 10) break;
 		}
 		return ret;
 	}
@@ -645,86 +656,37 @@ public class SoupManager {
 		return count;
 	}
 	
-	/** Finds the code with the given string id, works like binarySearch
-	 * @param start - inclusive
-	 * @param end - exclusive*/
-	private int findCode(String code) {
-		/*if(start > end) return null;
-		int mid = (start + end) / 2;
-		Code midval = codes.get(mid);
-		int result = midval.getFullName().compareTo(code);
-		if(result == 0) {
-			return midval;
-		} else if(result > 0) {
-			return findCode(code, start, mid);
-		} else if(start != end) {
-			return findCode(code, mid + 1, end);
-		} else {
-			return null;
-		}*/
-		if(codes.size() == 0) return -1;
-		int start = 0;
-		int end = codes.size();
-		int mid = (start + end) / 2;
-		int t;
-		///System.out.println(codes);
-		while(start < end) {
-			mid = (start + end) / 2;
-			//System.out.println(mid + ": " + codes.get(mid));
-			t = code.compareTo(codes.get(mid).getFullName());
-			//System.out.println("t: " + t);
-			if(t == 0) {
-				return mid;
-			} else if(t < 0) {
-				end = mid;
-			} else {
-				start = mid + 1;
-			}
-		}
-		return -mid - 1;
-	}
-	
 	/**returns the code with the given id*/
 	public Code getCode(String code) {
-		code = code.trim();
-		//System.out.println(code);
-		int ix = findCode(code);
-		//System.out.println("ix: " + ix);
-		if(ix >= 0) {
-			return codes.get(ix);
-		} else {
-			return null;
-		}
+		return codeLookup.get(code.trim());
 	}
 	
 	/**Returns the total number of currently used codes*/
 	public int getActiveCodes() {
-		int count = 0;
-		ArrayList<Code> list = new ArrayList<Code>();
+		Set<Code> list = new HashSet<Code>();
 		Code c = null;
-		//try{
 		for(ListIterator<Cell> i = cells.listIterator(); i.hasNext(); c = i.next().getCode()) {
 			if(c != null) {
-				int ix = Collections.binarySearch(list, c);
-				if(ix < 0) {
-					list.add(-(ix + 1), c);
-					count++;
+				if(!list.contains(c)) {
+					list.add(c);
 				}
 			}
 		}
-		/*} catch(NullPointerException e) {
-			System.out.println(i.hasNext());
-			System.out.println(i.nextIndex());
-			e.printStackTrace();
-		}*/
-		return count;
+		return list.size();
 	}
 	
 	/**Returns a copy of all the codes held by the SoupManager*/
-	public List<Code> getAllCodes() {
-		ArrayList<Code> ret = new ArrayList<Code>(codes.size());
-		ret.addAll(codes);
-		//Collections.copy(ret, codes);
+	public Collection<Code> getAllCodes() {
+		HashSet<Code> ret = new HashSet<Code>(codes.size());
+		ret.addAll(codes.keySet());
 		return ret;
+	}
+	
+	/**Adds the code to the code list and returns false, or returns true if the code list was unmodified and no code was added (due to duplicate)*/
+	public boolean addCode(Code c) {
+		if(codes.containsKey(c)) return true;
+		codes.put(c, c);
+		codeLookup.put(c.getFullName(), c);
+		return false;
 	}
 }
